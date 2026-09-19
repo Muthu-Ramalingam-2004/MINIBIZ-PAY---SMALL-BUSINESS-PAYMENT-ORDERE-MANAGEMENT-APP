@@ -42,7 +42,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title={`Good morning, ${merchant.ownerName}`}
+        title={`Good morning, ${merchant?.ownerName || 'Merchant'}`}
         subtitle="Here's what's happening with your business today."
         action={
           <Link href="/orders/new">
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                         isOpen: true,
                         name: order.customerName,
                         mobile: order.customerMobile,
-                        message: `Hi ${order.customerName}, this is a reminder from ${merchant.businessName} regarding your order #${order.id} scheduled for ${formatDate(order.deliveryDate)} at ${order.deliveryTime}.`,
+                        message: `Hi ${order.customerName}, this is a reminder from ${merchant?.businessName || 'MiniBiz Pay'} regarding your order #${order.id} scheduled for ${formatDate(order.deliveryDate)} at ${order.deliveryTime}.`,
                       })
                     }
                   >
@@ -310,4 +310,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
