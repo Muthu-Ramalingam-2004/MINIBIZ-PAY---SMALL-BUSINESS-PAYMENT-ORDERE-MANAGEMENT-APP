@@ -228,6 +228,19 @@ function saveDb() {
   }
 }
 
+// Background sync helper for live Supabase PostgreSQL tables
+async function syncSupabaseRecord(table, record) {
+  try {
+    const isSupabaseConfigured =
+      process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from(table).upsert(record).catch(() => {})
+    }
+  } catch {
+    // Ignore offline network errors
+  }
+}
+
 const db = {
   get merchants() {
     return loadDb().merchants
@@ -251,6 +264,7 @@ const db = {
     return loadDb().invoices
   },
   save: saveDb,
+  syncSupabaseRecord,
 }
 
 module.exports = { db, saveDb }
