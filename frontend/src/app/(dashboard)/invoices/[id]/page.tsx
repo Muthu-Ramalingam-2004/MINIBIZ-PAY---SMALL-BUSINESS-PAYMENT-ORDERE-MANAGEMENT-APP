@@ -64,9 +64,9 @@ export default function InvoiceDetailPage() {
                 MiniBiz<span className="text-brand-600 dark:text-brand-400 print:text-brand-600">Pay</span>
               </span>
             </div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 print:text-slate-900">{merchant.businessName}</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 print:text-slate-500">{merchant.category}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 print:text-slate-500">Contact: {merchant.mobile} • {merchant.email}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 print:text-slate-900">{merchant?.businessName || 'MiniBiz Merchant'}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 print:text-slate-500">{merchant?.category || 'Retail & Services'}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 print:text-slate-500">Contact: {merchant?.mobile || 'N/A'} • {merchant?.email || 'N/A'}</p>
           </div>
 
           <div className="text-left sm:text-right">

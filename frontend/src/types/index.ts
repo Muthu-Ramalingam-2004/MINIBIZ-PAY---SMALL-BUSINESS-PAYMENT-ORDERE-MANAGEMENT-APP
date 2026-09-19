@@ -81,6 +81,7 @@ export interface Invoice {
 }
 
 export interface MerchantProfile {
+  id?: string
   businessName: string
   ownerName: string
   mobile: string

@@ -14,14 +14,14 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'notifications' | 'appearance' | 'account'>('profile')
 
   // Profile state
-  const [businessName, setBusinessName] = useState(merchant.businessName)
-  const [ownerName, setOwnerName] = useState(merchant.ownerName)
-  const [mobile, setMobile] = useState(merchant.mobile)
-  const [email, setEmail] = useState(merchant.email)
-  const [category, setCategory] = useState(merchant.category)
+  const [businessName, setBusinessName] = useState(merchant?.businessName || '')
+  const [ownerName, setOwnerName] = useState(merchant?.ownerName || '')
+  const [mobile, setMobile] = useState(merchant?.mobile || '')
+  const [email, setEmail] = useState(merchant?.email || '')
+  const [category, setCategory] = useState(merchant?.category || '')
 
   // Payment settings state
-  const [feePercent, setFeePercent] = useState<number>(merchant.platformFeePercent || 1.0)
+  const [feePercent, setFeePercent] = useState<number>(merchant?.platformFeePercent || 1.0)
   const [testAmount, setTestAmount] = useState<number>(10000)
 
   // Notifications state

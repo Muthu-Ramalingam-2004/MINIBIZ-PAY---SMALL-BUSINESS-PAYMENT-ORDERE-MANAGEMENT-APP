@@ -73,8 +73,8 @@ export default function MockCustomerPaymentPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-slate-400 font-semibold uppercase">Merchant</p>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{merchant.businessName}</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{merchant.category}</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{merchant?.businessName || 'MiniBiz Merchant'}</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{merchant?.category || 'Retail & Services'}</p>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export default function MockCustomerPaymentPage() {
 
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Payment Successful!</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Thank you! Your payment has been received by {merchant.businessName}.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Thank you! Your payment has been received by {merchant?.businessName || 'MiniBiz Merchant'}.</p>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-2 text-left">

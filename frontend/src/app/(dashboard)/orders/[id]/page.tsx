@@ -42,7 +42,7 @@ export default function OrderDetailPage() {
   const matchingInvoice = invoices.find((inv) => inv.orderId === order.id)
 
   const handleSendConfirmation = () => {
-    const text = `Hi ${order.customerName}, your order #${order.id} for ${order.productService} has been confirmed by ${merchant.businessName}! Delivery scheduled for ${formatDate(order.deliveryDate)} at ${order.deliveryTime}.`
+    const text = `Hi ${order.customerName}, your order #${order.id} for ${order.productService} has been confirmed by ${merchant?.businessName || 'MiniBiz Merchant'}! Delivery scheduled for ${formatDate(order.deliveryDate)} at ${order.deliveryTime}.`
     setWhatsappModal({
       isOpen: true,
       title: 'Send Order Confirmation',
@@ -51,7 +51,7 @@ export default function OrderDetailPage() {
   }
 
   const handleSendReminder = () => {
-    const text = `Hi ${order.customerName}, this is a reminder regarding your pending payment of ${formatCurrency(order.balanceAmount)} for Order #${order.id} with ${merchant.businessName}.`
+    const text = `Hi ${order.customerName}, this is a reminder regarding your pending payment of ${formatCurrency(order.balanceAmount)} for Order #${order.id} with ${merchant?.businessName || 'MiniBiz Merchant'}.`
     setWhatsappModal({
       isOpen: true,
       title: 'Send Payment Reminder',

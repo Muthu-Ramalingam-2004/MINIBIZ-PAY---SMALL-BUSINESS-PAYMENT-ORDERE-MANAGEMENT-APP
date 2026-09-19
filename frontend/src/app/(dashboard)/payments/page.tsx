@@ -199,7 +199,7 @@ export default function PaymentsPage() {
                               isOpen: true,
                               name: order.customerName,
                               mobile: order.customerMobile,
-                              message: `Hi ${order.customerName}, this is a gentle reminder regarding your pending payment of ${formatCurrency(order.balanceAmount)} for Order #${order.id} with ${merchant.businessName}. Please complete your payment here: https://minibizpay.app/payment/${order.id}`,
+                              message: `Hi ${order.customerName}, this is a gentle reminder regarding your pending payment of ${formatCurrency(order.balanceAmount)} for Order #${order.id} with ${merchant?.businessName || 'MiniBiz Merchant'}. Please complete your payment here: https://minibizpay.app/payment/${order.id}`,
                             })
                           }
                         >

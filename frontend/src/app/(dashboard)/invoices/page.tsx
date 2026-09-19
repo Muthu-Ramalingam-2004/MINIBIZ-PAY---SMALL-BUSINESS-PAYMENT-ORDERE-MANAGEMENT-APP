@@ -69,7 +69,7 @@ export default function InvoicesPage() {
                             isOpen: true,
                             name: inv.customerName,
                             mobile: inv.customerMobile,
-                            message: `Hi ${inv.customerName}, here is your tax invoice ${inv.id} for Order #${inv.orderId} from ${merchant.businessName}. Total: ${formatCurrency(inv.totalAmount)}, Balance Due: ${formatCurrency(inv.balanceAmount)}. View full invoice: https://minibizpay.app/invoices/${inv.id}`,
+                            message: `Hi ${inv.customerName}, here is your tax invoice ${inv.id} for Order #${inv.orderId} from ${merchant?.businessName || 'MiniBiz Merchant'}. Total: ${formatCurrency(inv.totalAmount)}, Balance Due: ${formatCurrency(inv.balanceAmount)}. View full invoice: https://minibizpay.app/invoices/${inv.id}`,
                           })
                         }
                       >

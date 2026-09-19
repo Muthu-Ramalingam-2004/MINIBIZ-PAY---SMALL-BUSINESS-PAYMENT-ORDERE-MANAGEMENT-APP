@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useApp } from '@/context/app-context'
@@ -11,7 +11,7 @@ import { Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, CheckCircle2, ShieldChe
 
 type ViewMode = 'login' | 'forgot_email' | 'forgot_reset'
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, requestPasswordReset, resetPassword } = useApp()
@@ -337,5 +337,17 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <LoginFormContent />
+    </Suspense>
   )
 }

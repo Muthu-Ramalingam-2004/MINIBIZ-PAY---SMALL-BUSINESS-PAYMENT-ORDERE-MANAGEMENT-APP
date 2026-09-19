@@ -480,7 +480,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     email: '',
     category: 'Home Baker & Confectionery',
     platformFeePercent: 1.0,
-    darkMode: false,
+    darkMode: false as boolean,
   }
 
   return (
