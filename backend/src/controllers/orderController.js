@@ -1,64 +1,10 @@
-const { bookingsDB } = require('./bookingController')
-const { invoicesDB } = require('./invoiceController')
-
-let ordersDB = [
-  {
-    id: 'ORD-1001',
-    customerId: 'CUST-001',
-    customerName: 'Rahul Kumar',
-    customerMobile: '+91 98765 43210',
-    customerEmail: 'rahul.k@example.com',
-    productService: 'Custom Birthday Cake (2kg Chocolate Truffle)',
-    totalAmount: 1500,
-    advanceAmount: 500,
-    balanceAmount: 1000,
-    paymentStatus: 'Advance Paid',
-    orderStatus: 'Confirmed',
-    deliveryDate: '2026-09-19',
-    deliveryTime: '10:30 AM',
-    notes: 'Blue buttercream frosting with "Happy 10th Birthday Arav" written.',
-    createdAt: '2026-09-17T14:30:00Z',
-  },
-  {
-    id: 'ORD-1002',
-    customerId: 'CUST-002',
-    customerName: 'Ananya Roy',
-    customerMobile: '+91 98199 87654',
-    customerEmail: 'ananya.roy@example.com',
-    productService: 'Assorted Macarons Box (12 Pcs)',
-    totalAmount: 1200,
-    advanceAmount: 1200,
-    balanceAmount: 0,
-    paymentStatus: 'Fully Paid',
-    orderStatus: 'Delivered',
-    deliveryDate: '2026-09-18',
-    deliveryTime: '04:00 PM',
-    notes: 'Ribbon box packaging.',
-    createdAt: '2026-09-16T11:00:00Z',
-  },
-  {
-    id: 'ORD-1003',
-    customerId: 'CUST-003',
-    customerName: 'Vikram Mehta',
-    customerMobile: '+91 97654 32109',
-    customerEmail: 'vikram.m@corporatedesign.in',
-    productService: 'Corporate Snack & Cookie Gift Baskets (x10)',
-    totalAmount: 12500,
-    advanceAmount: 8000,
-    balanceAmount: 4500,
-    paymentStatus: 'Advance Paid',
-    orderStatus: 'Preparing',
-    deliveryDate: '2026-09-20',
-    deliveryTime: '11:00 AM',
-    notes: 'Company logo tags to be attached on each basket.',
-    createdAt: '2026-09-15T09:15:00Z',
-  },
-]
+const { db, saveDb } = require('../config/db')
 
 exports.getOrders = async (req, res, next) => {
   try {
+    const merchantId = req.merchant.id
     const { status, paymentStatus, search } = req.query
-    let result = [...ordersDB]
+    let result = db.orders.filter((o) => o.merchantId === merchantId)
 
     if (status && status !== 'all') {
       result = result.filter((o) => o.orderStatus === status)
@@ -84,7 +30,8 @@ exports.getOrders = async (req, res, next) => {
 
 exports.getOrderById = async (req, res, next) => {
   try {
-    const order = ordersDB.find((o) => o.id === req.params.id)
+    const merchantId = req.merchant.id
+    const order = db.orders.find((o) => o.id === req.params.id && o.merchantId === merchantId)
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
@@ -96,6 +43,7 @@ exports.getOrderById = async (req, res, next) => {
 
 exports.createOrder = async (req, res, next) => {
   try {
+    const merchantId = req.merchant.id
     const {
       customerId,
       customerName,
@@ -125,9 +73,10 @@ exports.createOrder = async (req, res, next) => {
       payStatus = 'Advance Paid'
     }
 
-    const orderId = `ORD-${1001 + ordersDB.length}`
+    const orderId = `ORD-${1001 + db.orders.length}`
     const newOrder = {
       id: orderId,
+      merchantId,
       customerId: customerId || `CUST-${Date.now()}`,
       customerName,
       customerMobile: customerMobile || '+91 98765 43210',
@@ -144,12 +93,13 @@ exports.createOrder = async (req, res, next) => {
       createdAt: new Date().toISOString(),
     }
 
-    ordersDB.unshift(newOrder)
+    db.orders.unshift(newOrder)
 
     // Auto-create Booking if Confirmed
     if (orderStatus === 'Confirmed') {
-      bookingsDB.unshift({
+      db.bookings.unshift({
         id: `BKG-${orderId}`,
+        merchantId,
         orderId: newOrder.id,
         customerName: newOrder.customerName,
         customerMobile: newOrder.customerMobile,
@@ -158,12 +108,14 @@ exports.createOrder = async (req, res, next) => {
         time: newOrder.deliveryTime,
         amount: newOrder.totalAmount,
         status: newOrder.orderStatus,
+        createdAt: new Date().toISOString(),
       })
     }
 
     // Auto-create Invoice
-    invoicesDB.unshift({
-      id: `INV-2026-${String(invoicesDB.length + 1).padStart(3, '0')}`,
+    db.invoices.unshift({
+      id: `INV-2026-${String(db.invoices.length + 1).padStart(3, '0')}`,
+      merchantId,
       orderId: newOrder.id,
       customerName: newOrder.customerName,
       customerAddress: newOrder.customerEmail,
@@ -176,7 +128,10 @@ exports.createOrder = async (req, res, next) => {
       paymentStatus: newOrder.paymentStatus,
       date: new Date().toISOString().split('T')[0],
       dueDate: newOrder.deliveryDate,
+      createdAt: new Date().toISOString(),
     })
+
+    saveDb()
 
     res.status(201).json({ success: true, data: newOrder, message: 'Order created successfully' })
   } catch (error) {
@@ -186,8 +141,9 @@ exports.createOrder = async (req, res, next) => {
 
 exports.updateOrderStatus = async (req, res, next) => {
   try {
+    const merchantId = req.merchant.id
     const { status } = req.body
-    const order = ordersDB.find((o) => o.id === req.params.id)
+    const order = db.orders.find((o) => o.id === req.params.id && o.merchantId === merchantId)
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
@@ -195,12 +151,13 @@ exports.updateOrderStatus = async (req, res, next) => {
     order.orderStatus = status
 
     // Sync booking status
-    const booking = bookingsDB.find((b) => b.orderId === order.id)
+    const booking = db.bookings.find((b) => b.orderId === order.id && b.merchantId === merchantId)
     if (booking) {
       booking.status = status
     } else if (status === 'Confirmed') {
-      bookingsDB.unshift({
+      db.bookings.unshift({
         id: `BKG-${order.id}`,
+        merchantId,
         orderId: order.id,
         customerName: order.customerName,
         customerMobile: order.customerMobile,
@@ -209,9 +166,11 @@ exports.updateOrderStatus = async (req, res, next) => {
         time: order.deliveryTime,
         amount: order.totalAmount,
         status: order.orderStatus,
+        createdAt: new Date().toISOString(),
       })
     }
 
+    saveDb()
     res.json({ success: true, data: order, message: `Order status changed to ${status}` })
   } catch (error) {
     next(error)
@@ -220,15 +179,15 @@ exports.updateOrderStatus = async (req, res, next) => {
 
 exports.deleteOrder = async (req, res, next) => {
   try {
-    const index = ordersDB.findIndex((o) => o.id === req.params.id)
+    const merchantId = req.merchant.id
+    const index = db.orders.findIndex((o) => o.id === req.params.id && o.merchantId === merchantId)
     if (index === -1) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
-    const removed = ordersDB.splice(index, 1)[0]
+    const removed = db.orders.splice(index, 1)[0]
+    saveDb()
     res.json({ success: true, data: removed, message: 'Order deleted' })
   } catch (error) {
     next(error)
   }
 }
-
-module.exports.ordersDB = ordersDB

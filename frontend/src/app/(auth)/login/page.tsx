@@ -13,8 +13,8 @@ export default function LoginPage() {
   const router = useRouter()
   const { login } = useApp()
 
-  const [email, setEmail] = useState('priya@sweettreats.com')
-  const [password, setPassword] = useState('password123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
 
   const [isLoading, setIsLoading] = useState(false)
@@ -69,6 +69,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
                 required
               />
@@ -78,6 +79,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
                 leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
                 required
               />

@@ -1,48 +1,10 @@
-const { ordersDB } = require('./orderController')
-const { bookingsDB } = require('./bookingController')
-const { invoicesDB } = require('./invoiceController')
-
-let paymentLinksDB = [
-  {
-    id: 'LNK-501',
-    orderId: 'ORD-1001',
-    customerName: 'Rahul Kumar',
-    customerMobile: '+91 98765 43210',
-    amount: 500,
-    description: 'Advance Payment for Order #ORD-1001',
-    linkUrl: 'http://localhost:3000/payment/ORD-1001',
-    status: 'Paid',
-    createdAt: '2026-09-17 14:30 PM',
-  },
-  {
-    id: 'LNK-502',
-    orderId: 'ORD-1001',
-    customerName: 'Rahul Kumar',
-    customerMobile: '+91 98765 43210',
-    amount: 1000,
-    description: 'Balance Payment Due for Order #ORD-1001',
-    linkUrl: 'http://localhost:3000/payment/ORD-1001',
-    status: 'Active',
-    createdAt: '2026-09-18 10:00 AM',
-  },
-]
-
-let transactionsDB = [
-  {
-    id: 'TXN-88201',
-    orderId: 'ORD-1001',
-    customerName: 'Rahul Kumar',
-    amount: 500,
-    paymentType: 'Advance',
-    status: 'Successful',
-    paymentMethod: 'UPI (GPay)',
-    date: '2026-09-17 14:35 PM',
-  },
-]
+const { db, saveDb } = require('../config/db')
 
 exports.getPaymentLinks = async (req, res, next) => {
   try {
-    res.json({ success: true, count: paymentLinksDB.length, data: paymentLinksDB })
+    const merchantId = req.merchant.id
+    const links = db.paymentLinks.filter((l) => l.merchantId === merchantId)
+    res.json({ success: true, count: links.length, data: links })
   } catch (error) {
     next(error)
   }
@@ -50,25 +12,31 @@ exports.getPaymentLinks = async (req, res, next) => {
 
 exports.generatePaymentLink = async (req, res, next) => {
   try {
+    const merchantId = req.merchant.id
     const { customerName, amount, description, orderId, customerMobile } = req.body
     if (!customerName || !amount) {
       return res.status(400).json({ success: false, error: 'Customer name and amount are required' })
     }
 
     const targetOrderId = orderId || 'ORD-1001'
+    const host = req.get('host') || 'localhost:3000'
+    const protocol = req.protocol || 'http'
     const newLink = {
-      id: `LNK-${501 + paymentLinksDB.length}`,
+      id: `LNK-${501 + db.paymentLinks.length}`,
+      merchantId,
       orderId: targetOrderId,
       customerName,
       customerMobile: customerMobile || '+91 98765 43210',
       amount: Number(amount),
       description: description || 'Payment Request',
-      linkUrl: `http://localhost:3000/payment/${targetOrderId}`,
+      linkUrl: `${protocol}://${host}/payment/${targetOrderId}`,
       status: 'Active',
       createdAt: new Date().toLocaleString(),
     }
 
-    paymentLinksDB.unshift(newLink)
+    db.paymentLinks.unshift(newLink)
+    saveDb()
+
     res.status(201).json({ success: true, data: newLink, message: 'Payment link generated' })
   } catch (error) {
     next(error)
@@ -83,11 +51,12 @@ exports.processMockPayment = async (req, res, next) => {
     }
 
     const numericAmount = Number(amount)
-    const order = ordersDB.find((o) => o.id === orderId)
+    const order = db.orders.find((o) => o.id === orderId)
 
     // 1. Record transaction log
     const newTxn = {
       id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+      merchantId: order ? order.merchantId : 'MCH-001',
       orderId,
       customerName: order ? order.customerName : 'Customer',
       amount: numericAmount,
@@ -96,11 +65,9 @@ exports.processMockPayment = async (req, res, next) => {
       paymentMethod: 'UPI (Mock Payment)',
       date: new Date().toLocaleString(),
     }
-    transactionsDB.unshift(newTxn)
+    db.transactions.unshift(newTxn)
 
-    // 2. Exact requirement business logic workflow:
-    // When advance ₹500 paid -> Payment = Advance Paid, Order = Confirmed, Booking = Created, Calendar = Updated, Remaining = ₹1,000.
-    // When balance ₹1,000 paid -> Payment = Fully Paid.
+    // 2. Business logic updates
     if (order) {
       const newAdvance = paymentType === 'Full' ? order.totalAmount : order.advanceAmount + numericAmount
       order.advanceAmount = Math.min(order.totalAmount, newAdvance)
@@ -112,16 +79,15 @@ exports.processMockPayment = async (req, res, next) => {
         order.paymentStatus = 'Advance Paid'
       }
 
-      // Automatically confirm order & create booking if advance paid
       if (order.orderStatus === 'Pending') {
         order.orderStatus = 'Confirmed'
       }
 
-      // Ensure booking exists in calendar
-      const existingBkg = bookingsDB.find((b) => b.orderId === order.id)
+      const existingBkg = db.bookings.find((b) => b.orderId === order.id && b.merchantId === order.merchantId)
       if (!existingBkg) {
-        bookingsDB.unshift({
+        db.bookings.unshift({
           id: `BKG-${order.id}`,
+          merchantId: order.merchantId,
           orderId: order.id,
           customerName: order.customerName,
           customerMobile: order.customerMobile,
@@ -130,13 +96,13 @@ exports.processMockPayment = async (req, res, next) => {
           time: order.deliveryTime,
           amount: order.totalAmount,
           status: order.orderStatus,
+          createdAt: new Date().toISOString(),
         })
       } else {
         existingBkg.status = order.orderStatus
       }
 
-      // Update matching invoice
-      const matchingInv = invoicesDB.find((i) => i.orderId === order.id)
+      const matchingInv = db.invoices.find((i) => i.orderId === order.id && i.merchantId === order.merchantId)
       if (matchingInv) {
         matchingInv.advanceAmount = order.advanceAmount
         matchingInv.balanceAmount = order.balanceAmount
@@ -145,9 +111,11 @@ exports.processMockPayment = async (req, res, next) => {
     }
 
     // 3. Mark matching payment links as Paid
-    paymentLinksDB.forEach((l) => {
+    db.paymentLinks.forEach((l) => {
       if (l.orderId === orderId) l.status = 'Paid'
     })
+
+    saveDb()
 
     res.json({
       success: true,
@@ -164,11 +132,10 @@ exports.processMockPayment = async (req, res, next) => {
 
 exports.getTransactions = async (req, res, next) => {
   try {
-    res.json({ success: true, count: transactionsDB.length, data: transactionsDB })
+    const merchantId = req.merchant.id
+    const txns = db.transactions.filter((t) => t.merchantId === merchantId)
+    res.json({ success: true, count: txns.length, data: txns })
   } catch (error) {
     next(error)
   }
 }
-
-module.exports.paymentLinksDB = paymentLinksDB
-module.exports.transactionsDB = transactionsDB

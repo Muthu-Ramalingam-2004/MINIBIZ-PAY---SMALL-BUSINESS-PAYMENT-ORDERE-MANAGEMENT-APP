@@ -1,4 +1,15 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api'
+function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl
+  }
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    const protocol = window.location.protocol
+    const hostname = window.location.hostname
+    return `${protocol}//${hostname}:5000/api`
+  }
+  return envUrl || 'http://localhost:5000/api'
+}
 
 export async function apiRequest<T = any>(
   endpoint: string,
@@ -15,7 +26,8 @@ export async function apiRequest<T = any>(
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const baseUrl = getApiBaseUrl()
+    const res = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers,
     })

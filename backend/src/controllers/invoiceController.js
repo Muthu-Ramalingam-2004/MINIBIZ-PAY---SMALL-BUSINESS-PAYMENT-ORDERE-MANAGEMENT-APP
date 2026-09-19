@@ -1,39 +1,10 @@
-let invoicesDB = [
-  {
-    id: 'INV-2026-001',
-    orderId: 'ORD-1001',
-    customerName: 'Rahul Kumar',
-    customerAddress: '102 Park Avenue, Bandra West, Mumbai, 400050',
-    customerMobile: '+91 98765 43210',
-    customerEmail: 'rahul.k@example.com',
-    productService: 'Custom Birthday Cake (2kg Chocolate Truffle)',
-    totalAmount: 1500,
-    advanceAmount: 500,
-    balanceAmount: 1000,
-    paymentStatus: 'Advance Paid',
-    date: '2026-09-17',
-    dueDate: '2026-09-19',
-  },
-  {
-    id: 'INV-2026-002',
-    orderId: 'ORD-1002',
-    customerName: 'Ananya Roy',
-    customerAddress: 'B-404 Sunshine Towers, Indiranagar, Bengaluru, 560038',
-    customerMobile: '+91 98199 87654',
-    customerEmail: 'ananya.roy@example.com',
-    productService: 'Assorted Macarons Box (12 Pcs)',
-    totalAmount: 1200,
-    advanceAmount: 1200,
-    balanceAmount: 0,
-    paymentStatus: 'Fully Paid',
-    date: '2026-09-16',
-    dueDate: '2026-09-18',
-  },
-]
+const { db } = require('../config/db')
 
 exports.getInvoices = async (req, res, next) => {
   try {
-    res.json({ success: true, count: invoicesDB.length, data: invoicesDB })
+    const merchantId = req.merchant.id
+    const invoices = db.invoices.filter((i) => i.merchantId === merchantId)
+    res.json({ success: true, count: invoices.length, data: invoices })
   } catch (error) {
     next(error)
   }
@@ -41,7 +12,10 @@ exports.getInvoices = async (req, res, next) => {
 
 exports.getInvoiceById = async (req, res, next) => {
   try {
-    const inv = invoicesDB.find((i) => i.id === req.params.id || i.orderId === req.params.id)
+    const merchantId = req.merchant.id
+    const inv = db.invoices.find(
+      (i) => (i.id === req.params.id || i.orderId === req.params.id) && i.merchantId === merchantId
+    )
     if (!inv) {
       return res.status(404).json({ success: false, error: 'Invoice not found' })
     }
@@ -50,5 +24,3 @@ exports.getInvoiceById = async (req, res, next) => {
     next(error)
   }
 }
-
-module.exports.invoicesDB = invoicesDB

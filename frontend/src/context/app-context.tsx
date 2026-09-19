@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Customer, Order, PaymentLink, Transaction, Invoice, MerchantProfile, OrderStatus, PaymentStatus } from '@/types'
-import { INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_TRANSACTIONS, INITIAL_PAYMENT_LINKS, INITIAL_INVOICES, INITIAL_MERCHANT } from '@/lib/demo-data'
 import { apiRequest } from '@/lib/api-client'
 
 export interface ToastMessage {
@@ -13,7 +12,9 @@ export interface ToastMessage {
 }
 
 interface AppContextType {
-  merchant: MerchantProfile
+  merchant: MerchantProfile | null
+  isAuthenticated: boolean
+  authLoading: boolean
   customers: Customer[]
   orders: Order[]
   transactions: Transaction[]
@@ -35,7 +36,7 @@ interface AppContextType {
   generatePaymentLink: (customerName: string, amount: number, description: string, orderId?: string, customerMobile?: string) => PaymentLink
   processMockPayment: (orderId: string, amount: number, paymentType: 'Advance' | 'Balance' | 'Full') => void
   updateMerchant: (data: Partial<MerchantProfile>) => void
-  refreshData: () => void
+  refreshData: () => Promise<void>
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signup: (data: { businessName: string; ownerName: string; mobile?: string; email: string; category?: string; password: string }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
@@ -44,12 +45,15 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [merchant, setMerchant] = useState<MerchantProfile>(INITIAL_MERCHANT)
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS)
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS)
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS)
-  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>(INITIAL_PAYMENT_LINKS)
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES)
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [authLoading, setAuthLoading] = useState<boolean>(true)
+
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -75,32 +79,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateMerchant({ darkMode: nextTheme === 'dark' })
   }
 
-  // Sync state from Express Backend API
   const refreshData = async () => {
-    try {
-      const [mRes, cRes, oRes, lRes, tRes, iRes] = await Promise.all([
-        apiRequest<MerchantProfile>('/auth/me'),
-        apiRequest<Customer[]>('/customers'),
-        apiRequest<Order[]>('/orders'),
-        apiRequest<PaymentLink[]>('/payments/links'),
-        apiRequest<Transaction[]>('/payments/transactions'),
-        apiRequest<Invoice[]>('/invoices'),
-      ])
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    if (!token) {
+      setMerchant(null)
+      setIsAuthenticated(false)
+      setAuthLoading(false)
+      setCustomers([])
+      setOrders([])
+      setPaymentLinks([])
+      setTransactions([])
+      setInvoices([])
+      return
+    }
 
+    try {
+      const mRes = await apiRequest<MerchantProfile>('/auth/me')
       if (mRes.success && mRes.data) {
         setMerchant(mRes.data)
+        setIsAuthenticated(true)
         if (mRes.data.darkMode) {
           setTheme('dark')
           if (typeof window !== 'undefined') document.documentElement.classList.add('dark')
         }
+
+        const [cRes, oRes, lRes, tRes, iRes] = await Promise.all([
+          apiRequest<Customer[]>('/customers'),
+          apiRequest<Order[]>('/orders'),
+          apiRequest<PaymentLink[]>('/payments/links'),
+          apiRequest<Transaction[]>('/payments/transactions'),
+          apiRequest<Invoice[]>('/invoices'),
+        ])
+
+        if (cRes.success && cRes.data) setCustomers(cRes.data)
+        if (oRes.success && oRes.data) setOrders(oRes.data)
+        if (lRes.success && lRes.data) setPaymentLinks(lRes.data)
+        if (tRes.success && tRes.data) setTransactions(tRes.data)
+        if (iRes.success && iRes.data) setInvoices(iRes.data)
+      } else {
+        if (typeof window !== 'undefined') localStorage.removeItem('token')
+        setMerchant(null)
+        setIsAuthenticated(false)
+        setCustomers([])
+        setOrders([])
+        setPaymentLinks([])
+        setTransactions([])
+        setInvoices([])
       }
-      if (cRes.success && cRes.data) setCustomers(cRes.data)
-      if (oRes.success && oRes.data) setOrders(oRes.data)
-      if (lRes.success && lRes.data) setPaymentLinks(lRes.data)
-      if (tRes.success && tRes.data) setTransactions(tRes.data)
-      if (iRes.success && iRes.data) setInvoices(iRes.data)
     } catch {
-      // Retain fallback local demo state if server offline
+      if (typeof window !== 'undefined') localStorage.removeItem('token')
+      setMerchant(null)
+      setIsAuthenticated(false)
+      setCustomers([])
+      setOrders([])
+      setPaymentLinks([])
+      setTransactions([])
+      setInvoices([])
+    } finally {
+      setAuthLoading(false)
     }
   }
 
@@ -127,8 +163,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
 
     if (res.success && res.data) {
-      localStorage.setItem('token', res.data.token)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', res.data.token)
+      }
       setMerchant(res.data.merchant)
+      setIsAuthenticated(true)
       if (res.data.merchant.darkMode) {
         setTheme('dark')
         if (typeof window !== 'undefined') document.documentElement.classList.add('dark')
@@ -137,7 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await refreshData()
       return { success: true }
     } else {
-      return { success: false, error: res.error || 'Invalid credentials' }
+      return { success: false, error: res.error || 'Invalid email or password' }
     }
   }
 
@@ -148,8 +187,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
 
     if (res.success && res.data) {
-      localStorage.setItem('token', res.data.token)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', res.data.token)
+      }
       setMerchant(res.data.merchant)
+      setIsAuthenticated(true)
       addToast('Account Created!', `Welcome to MiniBiz Pay, ${res.data.merchant.ownerName}!`, 'success')
       await refreshData()
       return { success: true }
@@ -159,8 +201,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
-    setMerchant(INITIAL_MERCHANT)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token')
+    }
+    setMerchant(null)
+    setIsAuthenticated(false)
+    setCustomers([])
+    setOrders([])
+    setTransactions([])
+    setPaymentLinks([])
+    setInvoices([])
     addToast('Logged Out', 'You have been logged out.', 'info')
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
@@ -181,7 +231,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setCustomers((prev) => [newCustomer, ...prev])
 
-    // Sync with backend API
     apiRequest('/customers', {
       method: 'POST',
       body: JSON.stringify(customerData),
@@ -229,7 +278,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setOrders((prev) => [newOrder, ...prev])
 
-    // Update customer stats
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === orderInput.customerId || c.name.toLowerCase() === orderInput.customerName.toLowerCase()) {
@@ -245,7 +293,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     )
 
-    // Generate Invoice
     const newInvoice: Invoice = {
       id: `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`,
       orderId: newOrder.id,
@@ -263,7 +310,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setInvoices((prev) => [newInvoice, ...prev])
 
-    // Backend API Sync
     apiRequest('/orders', {
       method: 'POST',
       body: JSON.stringify(orderInput),
@@ -327,7 +373,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const processMockPayment = (orderId: string, amount: number, paymentType: 'Advance' | 'Balance' | 'Full') => {
-    // 1. Record Transaction
     const newTxn: Transaction = {
       id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
       orderId,
@@ -340,7 +385,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setTransactions((prev) => [newTxn, ...prev])
 
-    // 2. Update Order State
     setOrders((prev) =>
       prev.map((o) => {
         if (o.id === orderId) {
@@ -360,7 +404,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     )
 
-    // 3. Update Invoice
     setInvoices((prev) =>
       prev.map((inv) => {
         if (inv.orderId === orderId) {
@@ -377,12 +420,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     )
 
-    // 4. Update Payment Links status
     setPaymentLinks((prev) =>
       prev.map((l) => (l.orderId === orderId ? { ...l, status: 'Paid' } : l))
     )
 
-    // Sync with backend REST API
     apiRequest('/payments/mock-pay', {
       method: 'POST',
       body: JSON.stringify({ orderId, amount, paymentType }),
@@ -392,7 +433,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateMerchant = (data: Partial<MerchantProfile>) => {
-    setMerchant((prev) => ({ ...prev, ...data }))
+    if (!merchant) return
+    setMerchant((prev) => (prev ? { ...prev, ...data } : null))
     apiRequest('/auth/merchant', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -400,10 +442,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToast('Settings Saved', 'Business settings updated successfully.', 'success')
   }
 
+  const merchantOrDefault: MerchantProfile = merchant || {
+    id: '',
+    businessName: '',
+    ownerName: '',
+    mobile: '',
+    email: '',
+    category: 'Home Baker & Confectionery',
+    platformFeePercent: 1.0,
+    darkMode: false,
+  }
+
   return (
     <AppContext.Provider
       value={{
-        merchant,
+        merchant: merchantOrDefault,
+        isAuthenticated,
+        authLoading,
         customers,
         orders,
         transactions,

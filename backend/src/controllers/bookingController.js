@@ -1,35 +1,14 @@
-let bookingsDB = [
-  {
-    id: 'BKG-ORD-1001',
-    orderId: 'ORD-1001',
-    customerName: 'Rahul Kumar',
-    customerMobile: '+91 98765 43210',
-    productService: 'Custom Birthday Cake (2kg Chocolate Truffle)',
-    date: '2026-09-19',
-    time: '10:30 AM',
-    amount: 1500,
-    status: 'Confirmed',
-  },
-  {
-    id: 'BKG-ORD-1003',
-    orderId: 'ORD-1003',
-    customerName: 'Vikram Mehta',
-    customerMobile: '+91 97654 32109',
-    productService: 'Corporate Snack & Cookie Gift Baskets (x10)',
-    date: '2026-09-20',
-    time: '11:00 AM',
-    amount: 12500,
-    status: 'Preparing',
-  },
-]
+const { db, saveDb } = require('../config/db')
 
 exports.getBookings = async (req, res, next) => {
   try {
+    const merchantId = req.merchant.id
     const { status, filter } = req.query
-    let result = [...bookingsDB]
+    let result = db.bookings.filter((b) => b.merchantId === merchantId)
 
     if (filter === 'today') {
-      result = result.filter((b) => b.date === '2026-09-19' || b.date === new Date().toISOString().split('T')[0])
+      const today = new Date().toISOString().split('T')[0]
+      result = result.filter((b) => b.date === '2026-09-19' || b.date === today)
     } else if (filter === 'upcoming') {
       result = result.filter((b) => b.status === 'Confirmed' || b.status === 'Preparing' || b.status === 'Ready')
     } else if (filter === 'completed') {
@@ -46,15 +25,17 @@ exports.getBookings = async (req, res, next) => {
 
 exports.updateBooking = async (req, res, next) => {
   try {
-    const booking = bookingsDB.find((b) => b.id === req.params.id || b.orderId === req.params.id)
+    const merchantId = req.merchant.id
+    const booking = db.bookings.find(
+      (b) => (b.id === req.params.id || b.orderId === req.params.id) && b.merchantId === merchantId
+    )
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' })
     }
     Object.assign(booking, req.body)
+    saveDb()
     res.json({ success: true, data: booking, message: 'Booking updated' })
   } catch (error) {
     next(error)
   }
 }
-
-module.exports.bookingsDB = bookingsDB
