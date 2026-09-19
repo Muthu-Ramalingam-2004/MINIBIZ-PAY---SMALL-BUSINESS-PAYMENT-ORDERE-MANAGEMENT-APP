@@ -51,7 +51,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     case 'Preparing':
       return (
         <Badge variant="info">
-          <Package className="w-3 h-3 animate-pulse" />
+          <Package className="w-3 h-3" />
           <span>Preparing</span>
         </Badge>
       )

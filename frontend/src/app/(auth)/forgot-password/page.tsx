@@ -7,23 +7,23 @@ import { useApp } from '@/context/app-context'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Mail, ArrowLeft, Lock, KeyRound, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Mail, ArrowLeft, Lock, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
-  const { requestPasswordOTP, resetPasswordWithOTP } = useApp()
+  const { requestPasswordReset, resetPassword } = useApp()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [recoveryToken, setRecoveryToken] = useState('')
 
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
-  const handleRequestOTP = async (e: React.FormEvent) => {
+  const handleVerifyEmail = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
     setSuccessMessage('')
@@ -34,26 +34,26 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true)
-    const res = await requestPasswordOTP(email)
+    const res = await requestPasswordReset(email)
     setIsLoading(false)
 
     if (res.success) {
-      if (res.otp) {
-        setOtp(res.otp)
+      if (res.recoveryToken) {
+        setRecoveryToken(res.recoveryToken)
       }
-      setSuccessMessage('Verification code generated. Please enter the code and your new password below.')
+      setSuccessMessage('Account verified. Please enter your new password below.')
       setStep(2)
     } else {
       setErrorMessage(res.error || 'No account found with this email address.')
     }
   }
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
     setSuccessMessage('')
 
-    if (!email || !otp || !newPassword || !confirmNewPassword) {
+    if (!email || !newPassword || !confirmNewPassword) {
       setErrorMessage('Please fill in all fields.')
       return
     }
@@ -69,10 +69,10 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true)
-    const res = await resetPasswordWithOTP({
+    const res = await resetPassword({
       email,
-      otp,
       newPassword,
+      recoveryToken,
     })
     setIsLoading(false)
 
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
       alert('Password changed successfully. Please login with your new password.')
       router.push('/login')
     } else {
-      setErrorMessage(res.error || 'Failed to reset password. Please check your verification code.')
+      setErrorMessage(res.error || 'Failed to reset password. Please check your credentials.')
     }
   }
 
@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Reset Password</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            {step === 1 ? 'Step 1: Enter your registered email to receive verification code' : 'Step 2: Enter verification code & set new password'}
+            {step === 1 ? 'Step 1: Enter your registered account email' : 'Step 2: Enter your new password'}
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
             )}
 
             {step === 1 ? (
-              <form onSubmit={handleRequestOTP} className="space-y-4">
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
                 <Input
                   label="Registered Email"
                   type="email"
@@ -125,28 +125,19 @@ export default function ForgotPasswordPage() {
                   required
                 />
 
-                <Button variant="primary" type="submit" className="w-full py-2.5" isLoading={isLoading} rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Get Verification Code
+                <Button variant="primary" type="submit" className="w-full py-2.5" isLoading={isLoading} leftIcon={<ShieldCheck className="w-4 h-4" />}>
+                  Verify Account & Continue
                 </Button>
               </form>
             ) : (
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
                 <Input
                   label="Account Email"
                   type="email"
                   value={email}
-                  readOnly
+                  onChange={(e) => setEmail(e.target.value)}
                   leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-                  className="bg-slate-100 dark:bg-slate-800 cursor-not-allowed"
-                />
-
-                <Input
-                  label="6-Digit Verification Code (OTP)"
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="e.g. 123456"
-                  leftIcon={<KeyRound className="w-4 h-4 text-slate-400" />}
+                  placeholder="you@example.com"
                   required
                 />
 
@@ -171,7 +162,7 @@ export default function ForgotPasswordPage() {
                 />
 
                 <Button variant="primary" type="submit" className="w-full py-2.5" isLoading={isLoading}>
-                  Update Password
+                  Change Password
                 </Button>
               </form>
             )}

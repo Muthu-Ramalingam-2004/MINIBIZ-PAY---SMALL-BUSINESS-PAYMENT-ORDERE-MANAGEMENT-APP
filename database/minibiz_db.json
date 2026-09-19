@@ -51,6 +51,32 @@
       "darkMode": false,
       "passwordHash": "$2a$08$IpymLbaHQg3VBR7o7MToOeWfWBLGPluMEgn6nBo1ORAwXY.RRLcki",
       "createdAt": "2026-09-19T06:11:28.303Z"
+    },
+    {
+      "id": "MCH-105",
+      "user_id": "usr_1789798696718_agcbm",
+      "businessName": "Muthu Ram Fashion Store",
+      "ownerName": "Muthu Ramalingam",
+      "mobile": "9344782312",
+      "email": "muthuramalingam9344@gmail.com",
+      "category": "Boutique & Fashion Store",
+      "platformFeePercent": 1,
+      "darkMode": true,
+      "passwordHash": "$2a$08$Jd7MKECMR4ysYZTgiBz/MenrDsc.C9wt.NQTZ7YEDaM1skpSJ7Z8.",
+      "createdAt": "2026-09-19T06:18:16.763Z"
+    },
+    {
+      "id": "MCH-106",
+      "user_id": "usr_1789799580623_8s8jr",
+      "businessName": "Deluxe Treats",
+      "ownerName": "Deluxe Owner",
+      "mobile": "+91 91111 22222",
+      "email": "merchant_final_1789799580558@test.com",
+      "category": "Home Baker & Confectionery",
+      "platformFeePercent": 1,
+      "darkMode": false,
+      "passwordHash": "$2a$08$OC8zrMHHIBPWs6Ai4EV6eutSP77snIKMj8YPUpXDk04YEp5lwX9F.",
+      "createdAt": "2026-09-19T06:33:00.651Z"
     }
   ],
   "customers": [

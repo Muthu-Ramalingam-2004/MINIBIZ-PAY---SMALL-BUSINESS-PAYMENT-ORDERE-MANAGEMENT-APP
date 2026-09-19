@@ -16,8 +16,8 @@ router.post('/auth/signup', authController.signup)
 router.post('/auth/login', authController.login)
 router.get('/auth/me', authenticateToken, authController.getMe)
 router.put('/auth/merchant', authenticateToken, authController.updateMerchant)
-router.post('/auth/forgot-password/request-otp', authController.requestPasswordResetOTP)
-router.post('/auth/forgot-password/reset', authController.resetPasswordWithOTP)
+router.post('/auth/forgot-password/request', authController.requestPasswordReset)
+router.post('/auth/forgot-password/reset', authController.resetPassword)
 
 // 2. Customers Routes
 router.get('/customers', authenticateToken, customerController.getCustomers)

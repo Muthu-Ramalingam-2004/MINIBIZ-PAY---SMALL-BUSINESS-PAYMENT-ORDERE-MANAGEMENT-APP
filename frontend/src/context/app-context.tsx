@@ -40,8 +40,8 @@ interface AppContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signup: (data: { businessName: string; ownerName: string; mobile?: string; email: string; category?: string; password: string }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  requestPasswordOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string; otp?: string }>
-  resetPasswordWithOTP: (data: { email: string; otp: string; newPassword: string }) => Promise<{ success: boolean; error?: string; message?: string }>
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string; message?: string; recoveryToken?: string }>
+  resetPassword: (data: { email: string; newPassword: string; recoveryToken?: string }) => Promise<{ success: boolean; error?: string; message?: string }>
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -62,11 +62,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark')
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+      const isDark = savedTheme ? savedTheme === 'dark' : document.documentElement.classList.contains('dark')
       setTheme(isDark ? 'dark' : 'light')
+      if (isDark) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     }
   }, [])
 
+  // Optimized theme toggling without network call overhead
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light'
     setTheme(nextTheme)
@@ -78,7 +85,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         document.documentElement.classList.remove('dark')
       }
     }
-    updateMerchant({ darkMode: nextTheme === 'dark' })
   }
 
   const refreshData = async () => {
@@ -219,18 +225,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const requestPasswordOTP = async (email: string): Promise<{ success: boolean; error?: string; message?: string; otp?: string }> => {
-    const res = await apiRequest<{ message: string; otp?: string }>('/auth/forgot-password/request-otp', {
+  const requestPasswordReset = async (email: string): Promise<{ success: boolean; error?: string; message?: string; recoveryToken?: string }> => {
+    const res = await apiRequest<{ message: string; recoveryToken?: string }>('/auth/forgot-password/request', {
       method: 'POST',
       body: JSON.stringify({ email }),
     })
     if (res.success) {
-      return { success: true, message: res.message, otp: res.data?.otp }
+      return { success: true, message: res.message, recoveryToken: res.data?.recoveryToken }
     }
-    return { success: false, error: res.error || 'Failed to request verification code' }
+    return { success: false, error: res.error || 'Failed to verify account email' }
   }
 
-  const resetPasswordWithOTP = async (data: { email: string; otp: string; newPassword: string }): Promise<{ success: boolean; error?: string; message?: string }> => {
+  const resetPassword = async (data: { email: string; newPassword: string; recoveryToken?: string }): Promise<{ success: boolean; error?: string; message?: string }> => {
     const res = await apiRequest<{ message: string }>('/auth/forgot-password/reset', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -238,7 +244,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (res.success) {
       return { success: true, message: res.message || 'Password changed successfully. Please login with your new password.' }
     }
-    return { success: false, error: res.error || 'Failed to reset password' }
+    return { success: false, error: res.error || 'Failed to update password' }
   }
 
   const addCustomer = (customerData: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>): Customer => {
@@ -508,8 +514,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
-        requestPasswordOTP,
-        resetPasswordWithOTP,
+        requestPasswordReset,
+        resetPassword,
       }}
     >
       {children}

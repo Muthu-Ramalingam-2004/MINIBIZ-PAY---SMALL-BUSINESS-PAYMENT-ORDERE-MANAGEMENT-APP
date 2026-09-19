@@ -4,8 +4,8 @@ const { JWT_SECRET } = require('../middleware/auth')
 const { supabase } = require('../config/supabase')
 const { db, saveDb } = require('../config/db')
 
-// Store OTP verification codes in memory with expiration (15 mins)
-const otpStore = new Map()
+// Secure recovery session tokens map with expiration (30 mins)
+const recoveryStore = new Map()
 
 exports.signup = async (req, res, next) => {
   try {
@@ -208,12 +208,12 @@ exports.updateMerchant = async (req, res, next) => {
   }
 }
 
-exports.requestPasswordResetOTP = async (req, res, next) => {
+exports.requestPasswordReset = async (req, res, next) => {
   try {
     const { email } = req.body
 
     if (!email) {
-      return res.status(400).json({ success: false, error: 'Please enter your email address.' })
+      return res.status(400).json({ success: false, error: 'Please enter your registered email address.' })
     }
 
     const cleanEmail = email.trim().toLowerCase()
@@ -223,36 +223,36 @@ exports.requestPasswordResetOTP = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'No account found with this email address.' })
     }
 
-    // Generate 6-digit OTP code
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = Date.now() + 15 * 60 * 1000 // 15 mins
+    const recoveryToken = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    recoveryStore.set(cleanEmail, { token: recoveryToken, expiresAt: Date.now() + 30 * 60 * 1000 })
 
-    otpStore.set(cleanEmail, { code: otpCode, expiresAt })
-
-    // If Supabase configured, trigger Supabase OTP as well
     const isSupabaseConfigured =
       process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
 
     if (isSupabaseConfigured) {
-      await supabase.auth.signInWithOtp({ email: cleanEmail }).catch(() => {})
+      const host = req.get('host') || 'localhost:3000'
+      const protocol = req.protocol || 'http'
+      await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${protocol}://${host}/login?mode=reset_password&email=${encodeURIComponent(cleanEmail)}`,
+      }).catch(() => {})
     }
 
     res.json({
       success: true,
-      message: 'Verification code generated successfully.',
-      otp: otpCode, // Provided for instant in-app verification
+      message: 'Account verified. You can now set your new password.',
+      recoveryToken,
     })
   } catch (error) {
     next(error)
   }
 }
 
-exports.resetPasswordWithOTP = async (req, res, next) => {
+exports.resetPassword = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body
+    const { email, newPassword, recoveryToken } = req.body
 
-    if (!email || !otp || !newPassword) {
-      return res.status(400).json({ success: false, error: 'Email, verification code, and new password are required.' })
+    if (!email || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email and new password are required.' })
     }
 
     if (newPassword.length < 6) {
@@ -266,19 +266,20 @@ exports.resetPasswordWithOTP = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Account not found for this email address.' })
     }
 
-    const otpRecord = otpStore.get(cleanEmail)
-    if (!otpRecord || otpRecord.code !== otp.trim() || Date.now() > otpRecord.expiresAt) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired verification code. Please check and try again.' })
+    // Verify recovery session
+    if (recoveryToken) {
+      const rec = recoveryStore.get(cleanEmail)
+      if (rec && (rec.token !== recoveryToken || Date.now() > rec.expiresAt)) {
+        return res.status(400).json({ success: false, error: 'Recovery session expired. Please verify your email again.' })
+      }
     }
 
-    // Hash and update password
+    // Update password hash
     merchant.passwordHash = bcrypt.hashSync(newPassword, 8)
     saveDb()
 
-    // Clear used OTP
-    otpStore.delete(cleanEmail)
+    recoveryStore.delete(cleanEmail)
 
-    // Update Supabase user password if configured
     const isSupabaseConfigured =
       process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
 
@@ -286,7 +287,7 @@ exports.resetPasswordWithOTP = async (req, res, next) => {
       try {
         await supabase.auth.admin.updateUserById(merchant.user_id, { password: newPassword })
       } catch (sbErr) {
-        // Log error silently if admin API unavailable
+        // Log error silently
       }
     }
 

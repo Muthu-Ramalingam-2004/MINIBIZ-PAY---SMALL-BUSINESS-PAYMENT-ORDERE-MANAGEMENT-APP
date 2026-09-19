@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/context/app-context'
 import { PageHeader } from '@/components/layout/page-header'
@@ -26,17 +26,22 @@ export default function OrdersPage() {
   const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; name: string; mobile: string; message: string } | null>(null)
   const [paymentLinkModal, setPaymentLinkModal] = useState<{ isOpen: boolean; name: string; amount: number; orderId: string } | null>(null)
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      order.productService.toLowerCase().includes(search.toLowerCase())
+  // Performance Optimization: Memoize order search & status filtration
+  const filteredOrders = useMemo(() => {
+    const s = search.trim().toLowerCase()
+    return orders.filter((order) => {
+      const matchesSearch =
+        !s ||
+        order.id.toLowerCase().includes(s) ||
+        order.customerName.toLowerCase().includes(s) ||
+        order.productService.toLowerCase().includes(s)
 
-    const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter
-    const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter
+      const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter
+      const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter
 
-    return matchesSearch && matchesStatus && matchesPayment
-  })
+      return matchesSearch && matchesStatus && matchesPayment
+    })
+  }, [orders, search, statusFilter, paymentFilter])
 
   return (
     <div className="space-y-6">
@@ -52,8 +57,8 @@ export default function OrdersPage() {
         }
       />
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200">
+      {/* Filter and Search Bar with full Dark Theme optimization */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-150">
         <SearchBar value={search} onChange={setSearch} placeholder="Search by Order ID, customer, product..." className="max-w-md" />
 
         <FilterBar
@@ -125,40 +130,40 @@ export default function OrdersPage() {
               <TableBody>
                 {filteredOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono font-bold text-brand-600">{order.id}</TableCell>
+                    <TableCell className="font-mono font-bold text-brand-600 dark:text-brand-400">{order.id}</TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-semibold text-slate-900">{order.customerName}</p>
-                        <p className="text-[11px] text-slate-400">{order.customerMobile}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{order.customerName}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{order.customerMobile}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate font-medium text-slate-700">{order.productService}</TableCell>
-                    <TableCell className="font-bold text-slate-900">{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell className="font-semibold text-emerald-600">{formatCurrency(order.advanceAmount)}</TableCell>
-                    <TableCell className="font-bold text-rose-600">{formatCurrency(order.balanceAmount)}</TableCell>
+                    <TableCell className="max-w-xs truncate font-medium text-slate-700 dark:text-slate-300">{order.productService}</TableCell>
+                    <TableCell className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(order.totalAmount)}</TableCell>
+                    <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(order.advanceAmount)}</TableCell>
+                    <TableCell className="font-bold text-rose-600 dark:text-rose-400">{formatCurrency(order.balanceAmount)}</TableCell>
                     <TableCell>
                       <StatusBadge status={order.paymentStatus} />
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={order.orderStatus} />
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                       {formatDate(order.deliveryDate)}
-                      <span className="block text-[10px] text-slate-400">{order.deliveryTime}</span>
+                      <span className="block text-[10px] text-slate-400 dark:text-slate-500">{order.deliveryTime}</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-1.5 h-8 text-emerald-600"
+                          className="p-1.5 h-8 text-emerald-600 dark:text-emerald-400"
                           title="WhatsApp Share"
                           onClick={() =>
                             setWhatsappModal({
                               isOpen: true,
                               name: order.customerName,
                               mobile: order.customerMobile,
-                              message: `Hi ${order.customerName}, here is the update regarding your order #${order.id} (${order.productService}) with ${merchant.businessName}. Total: ${formatCurrency(order.totalAmount)}, Advance Paid: ${formatCurrency(order.advanceAmount)}, Balance Due: ${formatCurrency(order.balanceAmount)}.`,
+                              message: `Hi ${order.customerName}, here is the update regarding your order #${order.id} (${order.productService}) with ${merchant?.businessName || 'MiniBiz Pay'}. Total: ${formatCurrency(order.totalAmount)}, Advance Paid: ${formatCurrency(order.advanceAmount)}, Balance Due: ${formatCurrency(order.balanceAmount)}.`,
                             })
                           }
                         >
@@ -169,7 +174,7 @@ export default function OrdersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="p-1.5 h-8 text-brand-600"
+                            className="p-1.5 h-8 text-brand-600 dark:text-brand-400"
                             title="Generate Payment Link"
                             onClick={() =>
                               setPaymentLinkModal({
@@ -186,7 +191,7 @@ export default function OrdersPage() {
 
                         <Link href={`/orders/${order.id}`}>
                           <Button variant="ghost" size="sm" className="p-1.5 h-8">
-                            <Eye className="w-4 h-4 text-slate-600" />
+                            <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                           </Button>
                         </Link>
                       </div>

@@ -1,19 +1,20 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useApp } from '@/context/app-context'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-react'
+import { Lock, Mail, ArrowRight, AlertCircle, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react'
 
 type ViewMode = 'login' | 'forgot_email' | 'forgot_reset'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, requestPasswordOTP, resetPasswordWithOTP } = useApp()
+  const searchParams = useSearchParams()
+  const { login, requestPasswordReset, resetPassword } = useApp()
 
   const [mode, setMode] = useState<ViewMode>('login')
 
@@ -24,13 +25,22 @@ export default function LoginPage() {
 
   // Forgot password flow state
   const [resetEmail, setResetEmail] = useState('')
-  const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [recoveryToken, setRecoveryToken] = useState('')
 
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+
+  useEffect(() => {
+    const urlMode = searchParams.get('mode')
+    const urlEmail = searchParams.get('email')
+    if (urlMode === 'reset_password' || searchParams.get('type') === 'recovery') {
+      setMode('forgot_reset')
+      if (urlEmail) setResetEmail(urlEmail)
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,8 +63,8 @@ export default function LoginPage() {
     }
   }
 
-  // Forgot Password Step 1: Request OTP
-  const handleRequestOTP = async (e: React.FormEvent) => {
+  // Forgot Password Step 1: Verify Email
+  const handleVerifyEmail = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
     setSuccessMessage('')
@@ -65,28 +75,28 @@ export default function LoginPage() {
     }
 
     setIsLoading(true)
-    const res = await requestPasswordOTP(resetEmail)
+    const res = await requestPasswordReset(resetEmail)
     setIsLoading(false)
 
     if (res.success) {
-      if (res.otp) {
-        setOtp(res.otp) // Auto-populate verification code in UI for seamless developer/user experience
+      if (res.recoveryToken) {
+        setRecoveryToken(res.recoveryToken)
       }
-      setSuccessMessage('Verification code generated. Please enter the code and your new password below.')
+      setSuccessMessage('Account verified successfully. Please enter your new password below.')
       setMode('forgot_reset')
     } else {
       setErrorMessage(res.error || 'No account found with this email address.')
     }
   }
 
-  // Forgot Password Step 2: Verify OTP & Reset Password
-  const handleResetPassword = async (e: React.FormEvent) => {
+  // Forgot Password Step 2: Set New Password
+  const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
     setSuccessMessage('')
 
-    if (!resetEmail || !otp || !newPassword || !confirmNewPassword) {
-      setErrorMessage('Please fill in all fields.')
+    if (!resetEmail || !newPassword || !confirmNewPassword) {
+      setErrorMessage('Please fill in all required fields.')
       return
     }
 
@@ -101,10 +111,10 @@ export default function LoginPage() {
     }
 
     setIsLoading(true)
-    const res = await resetPasswordWithOTP({
+    const res = await resetPassword({
       email: resetEmail,
-      otp,
       newPassword,
+      recoveryToken,
     })
     setIsLoading(false)
 
@@ -114,11 +124,11 @@ export default function LoginPage() {
       setSuccessMessage('Password changed successfully. Please login with your new password.')
       setMode('login')
       setResetEmail('')
-      setOtp('')
       setNewPassword('')
       setConfirmNewPassword('')
+      setRecoveryToken('')
     } else {
-      setErrorMessage(res.error || 'Failed to reset password. Please check your verification code.')
+      setErrorMessage(res.error || 'Failed to update password. Please try again.')
     }
   }
 
@@ -137,8 +147,8 @@ export default function LoginPage() {
             {mode === 'login'
               ? 'Log in to your business payment dashboard'
               : mode === 'forgot_email'
-              ? 'Step 1: Enter your email to verify account'
-              : 'Step 2: Enter verification code & new password'}
+              ? 'Step 1: Enter your registered account email'
+              : 'Step 2: Enter your new password'}
           </p>
         </div>
 
@@ -200,7 +210,7 @@ export default function LoginPage() {
                       setErrorMessage('')
                       setSuccessMessage('')
                     }}
-                    className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs"
+                    className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs cursor-pointer"
                   >
                     Forgot password?
                   </button>
@@ -218,9 +228,9 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* 2. FORGOT PASSWORD STEP 1: EMAIL REQUEST */}
+            {/* 2. FORGOT PASSWORD STEP 1: EMAIL VERIFICATION */}
             {mode === 'forgot_email' && (
-              <form onSubmit={handleRequestOTP} className="space-y-4">
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
                 <Input
                   label="Registered Email Address"
                   type="email"
@@ -236,9 +246,9 @@ export default function LoginPage() {
                   type="submit"
                   className="w-full py-2.5"
                   isLoading={isLoading}
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  leftIcon={<ShieldCheck className="w-4 h-4" />}
                 >
-                  Get Verification Code
+                  Verify Account & Continue
                 </Button>
 
                 <div className="text-center pt-2">
@@ -249,7 +259,7 @@ export default function LoginPage() {
                       setErrorMessage('')
                       setSuccessMessage('')
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-brand-600 font-semibold"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-brand-600 font-semibold cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" /> Back to Login
                   </button>
@@ -257,25 +267,16 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* 3. FORGOT PASSWORD STEP 2: VERIFY OTP & RESET PASSWORD */}
+            {/* 3. FORGOT PASSWORD STEP 2: NEW PASSWORD */}
             {mode === 'forgot_reset' && (
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
                 <Input
                   label="Account Email"
                   type="email"
                   value={resetEmail}
-                  readOnly
+                  onChange={(e) => setResetEmail(e.target.value)}
                   leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-                  className="bg-slate-100 dark:bg-slate-800 cursor-not-allowed"
-                />
-
-                <Input
-                  label="6-Digit Verification Code (OTP)"
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="e.g. 123456"
-                  leftIcon={<KeyRound className="w-4 h-4 text-slate-400" />}
+                  placeholder="you@example.com"
                   required
                 />
 
@@ -305,7 +306,7 @@ export default function LoginPage() {
                   className="w-full py-2.5"
                   isLoading={isLoading}
                 >
-                  Update Password
+                  Change Password
                 </Button>
 
                 <div className="text-center pt-2">
@@ -316,7 +317,7 @@ export default function LoginPage() {
                       setErrorMessage('')
                       setSuccessMessage('')
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-brand-600 font-semibold"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-brand-600 font-semibold cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" /> Cancel & Back to Login
                   </button>
