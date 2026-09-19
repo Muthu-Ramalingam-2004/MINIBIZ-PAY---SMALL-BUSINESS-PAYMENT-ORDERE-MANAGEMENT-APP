@@ -4,6 +4,9 @@ const { JWT_SECRET } = require('../middleware/auth')
 const { supabase } = require('../config/supabase')
 const { db, saveDb } = require('../config/db')
 
+// Store OTP verification codes in memory with expiration (15 mins)
+const otpStore = new Map()
+
 exports.signup = async (req, res, next) => {
   try {
     const { businessName, ownerName, mobile, email, category, password } = req.body
@@ -113,43 +116,48 @@ exports.login = async (req, res, next) => {
     const isSupabaseConfigured =
       process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
 
+    let isPasswordValid = false
     let supabaseToken = null
 
+    // 1. Try bcrypt password check against registered merchant record
+    if (merchant && merchant.passwordHash) {
+      isPasswordValid = bcrypt.compareSync(password, merchant.passwordHash)
+    }
+
+    // 2. Try Supabase Auth login if configured
     if (isSupabaseConfigured) {
       const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: password,
       })
 
-      if (sbError || !sbData?.user) {
-        return res.status(401).json({ success: false, error: 'Invalid email or password.' })
-      }
+      if (!sbError && sbData?.user) {
+        isPasswordValid = true
+        supabaseToken = sbData.session?.access_token
 
-      supabaseToken = sbData.session?.access_token
-
-      if (!merchant) {
-        // Create merchant profile if created externally in Supabase Auth
-        const newMerchantId = `MCH-${String(db.merchants.length + 101).padStart(3, '0')}`
-        merchant = {
-          id: newMerchantId,
-          user_id: sbData.user.id,
-          businessName: sbData.user.user_metadata?.business_name || 'My Business',
-          ownerName: sbData.user.user_metadata?.owner_name || 'Merchant Owner',
-          mobile: '',
-          email: cleanEmail,
-          category: 'Home Baker & Confectionery',
-          platformFeePercent: 1.0,
-          darkMode: false,
-          passwordHash: bcrypt.hashSync(password, 8),
-          createdAt: new Date().toISOString(),
+        if (!merchant) {
+          const newMerchantId = `MCH-${String(db.merchants.length + 101).padStart(3, '0')}`
+          merchant = {
+            id: newMerchantId,
+            user_id: sbData.user.id,
+            businessName: sbData.user.user_metadata?.business_name || 'My Business',
+            ownerName: sbData.user.user_metadata?.owner_name || 'Merchant Owner',
+            mobile: '',
+            email: cleanEmail,
+            category: 'Home Baker & Confectionery',
+            platformFeePercent: 1.0,
+            darkMode: false,
+            passwordHash: bcrypt.hashSync(password, 8),
+            createdAt: new Date().toISOString(),
+          }
+          db.merchants.push(merchant)
+          saveDb()
         }
-        db.merchants.push(merchant)
-        saveDb()
       }
-    } else {
-      if (!merchant || !merchant.passwordHash || !bcrypt.compareSync(password, merchant.passwordHash)) {
-        return res.status(401).json({ success: false, error: 'Invalid email or password.' })
-      }
+    }
+
+    if (!merchant || !isPasswordValid) {
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' })
     }
 
     const token =
@@ -195,6 +203,97 @@ exports.updateMerchant = async (req, res, next) => {
 
     const { passwordHash: _, ...updatedData } = req.merchant
     res.json({ success: true, data: updatedData, message: 'Settings saved' })
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.requestPasswordResetOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Please enter your email address.' })
+    }
+
+    const cleanEmail = email.trim().toLowerCase()
+    const merchant = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'No account found with this email address.' })
+    }
+
+    // Generate 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = Date.now() + 15 * 60 * 1000 // 15 mins
+
+    otpStore.set(cleanEmail, { code: otpCode, expiresAt })
+
+    // If Supabase configured, trigger Supabase OTP as well
+    const isSupabaseConfigured =
+      process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
+
+    if (isSupabaseConfigured) {
+      await supabase.auth.signInWithOtp({ email: cleanEmail }).catch(() => {})
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification code generated successfully.',
+      otp: otpCode, // Provided for instant in-app verification
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.resetPasswordWithOTP = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email, verification code, and new password are required.' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' })
+    }
+
+    const cleanEmail = email.trim().toLowerCase()
+    const merchant = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Account not found for this email address.' })
+    }
+
+    const otpRecord = otpStore.get(cleanEmail)
+    if (!otpRecord || otpRecord.code !== otp.trim() || Date.now() > otpRecord.expiresAt) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired verification code. Please check and try again.' })
+    }
+
+    // Hash and update password
+    merchant.passwordHash = bcrypt.hashSync(newPassword, 8)
+    saveDb()
+
+    // Clear used OTP
+    otpStore.delete(cleanEmail)
+
+    // Update Supabase user password if configured
+    const isSupabaseConfigured =
+      process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
+
+    if (isSupabaseConfigured && merchant.user_id) {
+      try {
+        await supabase.auth.admin.updateUserById(merchant.user_id, { password: newPassword })
+      } catch (sbErr) {
+        // Log error silently if admin API unavailable
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully. Please login with your new password.',
+    })
   } catch (error) {
     next(error)
   }

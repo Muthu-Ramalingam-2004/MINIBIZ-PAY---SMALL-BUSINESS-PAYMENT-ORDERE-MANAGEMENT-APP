@@ -40,6 +40,8 @@ interface AppContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signup: (data: { businessName: string; ownerName: string; mobile?: string; email: string; category?: string; password: string }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
+  requestPasswordOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string; otp?: string }>
+  resetPasswordWithOTP: (data: { email: string; otp: string; newPassword: string }) => Promise<{ success: boolean; error?: string; message?: string }>
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -215,6 +217,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
     }
+  }
+
+  const requestPasswordOTP = async (email: string): Promise<{ success: boolean; error?: string; message?: string; otp?: string }> => {
+    const res = await apiRequest<{ message: string; otp?: string }>('/auth/forgot-password/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+    if (res.success) {
+      return { success: true, message: res.message, otp: res.data?.otp }
+    }
+    return { success: false, error: res.error || 'Failed to request verification code' }
+  }
+
+  const resetPasswordWithOTP = async (data: { email: string; otp: string; newPassword: string }): Promise<{ success: boolean; error?: string; message?: string }> => {
+    const res = await apiRequest<{ message: string }>('/auth/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (res.success) {
+      return { success: true, message: res.message || 'Password changed successfully. Please login with your new password.' }
+    }
+    return { success: false, error: res.error || 'Failed to reset password' }
   }
 
   const addCustomer = (customerData: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>): Customer => {
@@ -484,6 +508,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        requestPasswordOTP,
+        resetPasswordWithOTP,
       }}
     >
       {children}

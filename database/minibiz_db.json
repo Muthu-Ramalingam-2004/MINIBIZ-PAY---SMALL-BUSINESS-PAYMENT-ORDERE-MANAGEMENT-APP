@@ -38,6 +38,19 @@
       "darkMode": false,
       "passwordHash": "$2a$08$GS/ks6KYrpbFoyN1P.7Bce0gvbH37/9iGhuNZ92xVmRvQvMcZ0jXq",
       "createdAt": "2026-09-19T05:53:15.573Z"
+    },
+    {
+      "id": "MCH-104",
+      "user_id": "usr_1789798288265_8y06x",
+      "businessName": "Royal Sweets",
+      "ownerName": "Royal Owner",
+      "mobile": "+91 99999 33333",
+      "email": "merchant_1789798288146@bakery.com",
+      "category": "Home Baker & Confectionery",
+      "platformFeePercent": 1,
+      "darkMode": false,
+      "passwordHash": "$2a$08$IpymLbaHQg3VBR7o7MToOeWfWBLGPluMEgn6nBo1ORAwXY.RRLcki",
+      "createdAt": "2026-09-19T06:11:28.303Z"
     }
   ],
   "customers": [
