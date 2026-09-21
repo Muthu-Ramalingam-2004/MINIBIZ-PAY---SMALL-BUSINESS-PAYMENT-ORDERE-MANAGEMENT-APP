@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Customer, Order, PaymentLink, Transaction, Invoice, MerchantProfile, OrderStatus, PaymentStatus } from '@/types'
+import { Customer, Order, PaymentLink, Transaction, Invoice, Booking, MerchantProfile, OrderStatus, PaymentStatus } from '@/types'
 import { apiRequest } from '@/lib/api-client'
 
 export interface ToastMessage {
@@ -20,6 +20,7 @@ interface AppContextType {
   transactions: Transaction[]
   paymentLinks: PaymentLink[]
   invoices: Invoice[]
+  bookings: Booking[]
   toasts: ToastMessage[]
   sidebarOpen: boolean
   theme: 'light' | 'dark'
@@ -27,13 +28,13 @@ interface AppContextType {
   setSidebarOpen: (open: boolean) => void
   addToast: (title: string, message: string, type?: 'success' | 'info' | 'warning' | 'error') => void
   removeToast: (id: string) => void
-  addCustomer: (customer: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>) => Customer
+  addCustomer: (customer: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>) => Promise<Customer>
   updateCustomer: (id: string, customerData: Partial<Customer>) => void
   deleteCustomer: (id: string) => void
-  addOrder: (order: Omit<Order, 'id' | 'paymentStatus' | 'balanceAmount' | 'createdAt'>) => Order
+  addOrder: (order: Omit<Order, 'id' | 'paymentStatus' | 'balanceAmount' | 'createdAt'>) => Promise<Order>
   updateOrderStatus: (orderId: string, status: OrderStatus) => void
   updatePaymentStatus: (orderId: string, paymentStatus: PaymentStatus, paidAmount?: number) => void
-  generatePaymentLink: (customerName: string, amount: number, description: string, orderId?: string, customerMobile?: string) => PaymentLink
+  generatePaymentLink: (customerName: string, amount: number, description: string, orderId?: string, customerMobile?: string) => Promise<PaymentLink>
   processMockPayment: (orderId: string, amount: number, paymentType: 'Advance' | 'Balance' | 'Full') => void
   updateMerchant: (data: Partial<MerchantProfile>) => void
   refreshData: () => Promise<void>
@@ -56,6 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -89,12 +91,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const fetchEntities = async () => {
     try {
-      const [cRes, oRes, lRes, tRes, iRes] = await Promise.all([
+      const [cRes, oRes, lRes, tRes, iRes, bRes] = await Promise.all([
         apiRequest<Customer[]>('/customers', { timeoutMs: 12000 }),
         apiRequest<Order[]>('/orders', { timeoutMs: 12000 }),
         apiRequest<PaymentLink[]>('/payments/links', { timeoutMs: 12000 }),
         apiRequest<Transaction[]>('/payments/transactions', { timeoutMs: 12000 }),
         apiRequest<Invoice[]>('/invoices', { timeoutMs: 12000 }),
+        apiRequest<Booking[]>('/bookings', { timeoutMs: 12000 }),
       ])
 
       if (cRes.success && cRes.data) setCustomers(cRes.data)
@@ -102,6 +105,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (lRes.success && lRes.data) setPaymentLinks(lRes.data)
       if (tRes.success && tRes.data) setTransactions(tRes.data)
       if (iRes.success && iRes.data) setInvoices(iRes.data)
+      if (bRes.success && bRes.data) setBookings(bRes.data)
     } catch (err) {
       console.warn('[Fetch Entities Error]', err)
     }
@@ -118,6 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPaymentLinks([])
       setTransactions([])
       setInvoices([])
+      setBookings([])
       return
     }
 
@@ -142,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPaymentLinks([])
         setTransactions([])
         setInvoices([])
+        setBookings([])
         setAuthLoading(false)
       }
     } catch {
@@ -153,6 +159,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPaymentLinks([])
       setTransactions([])
       setInvoices([])
+      setBookings([])
       setAuthLoading(false)
     }
   }
@@ -235,6 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTransactions([])
     setPaymentLinks([])
     setInvoices([])
+    setBookings([])
     addToast('Logged Out', 'You have been logged out.', 'info')
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
@@ -263,9 +271,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { success: false, error: res.error || 'Failed to update password' }
   }
 
-  const addCustomer = (customerData: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>): Customer => {
+  const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>): Promise<Customer> => {
     const tempId = `CUST-${String(customers.length + 1).padStart(3, '0')}`
-    const newCustomer: Customer = {
+    const tempCustomer: Customer = {
       ...customerData,
       id: tempId,
       totalOrders: 0,
@@ -275,20 +283,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString().split('T')[0],
     }
 
-    setCustomers((prev) => [newCustomer, ...prev])
+    setCustomers((prev) => [tempCustomer, ...prev])
 
-    apiRequest<Customer>('/customers', {
+    const res = await apiRequest<Customer>('/customers', {
       method: 'POST',
       body: JSON.stringify(customerData),
-    }).then((res) => {
-      if (res.success && res.data) {
-        setCustomers((prev) => prev.map((c) => (c.id === tempId ? res.data! : c)))
-        fetchEntities()
-      }
     })
 
-    addToast('Customer Created', `${newCustomer.name} has been added to customer directory.`, 'success')
-    return newCustomer
+    if (res.success && res.data) {
+      const savedCustomer = res.data
+      setCustomers((prev) => [savedCustomer, ...prev.filter((c) => c.id !== tempId && c.id !== savedCustomer.id)])
+      addToast('Customer Created', `${savedCustomer.name} has been added to customer directory.`, 'success')
+      fetchEntities()
+      return savedCustomer
+    }
+
+    addToast('Customer Created', `${tempCustomer.name} has been added to customer directory.`, 'success')
+    return tempCustomer
   }
 
   const updateCustomer = (id: string, customerData: Partial<Customer>) => {
@@ -307,11 +318,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToast('Customer Deleted', `${target?.name || 'Customer'} removed from record.`, 'info')
   }
 
-  const addOrder = (orderInput: Omit<Order, 'id' | 'paymentStatus' | 'balanceAmount' | 'createdAt'>): Order => {
-    const nextNum = 1001 + orders.length
-    const tempOrderId = `ORD-${nextNum}`
+  const addOrder = async (orderInput: Omit<Order, 'id' | 'paymentStatus' | 'balanceAmount' | 'createdAt'>): Promise<Order> => {
     const balance = Math.max(0, orderInput.totalAmount - orderInput.advanceAmount)
-
     let payStatus: PaymentStatus = 'Unpaid'
     if (orderInput.advanceAmount >= orderInput.totalAmount && orderInput.totalAmount > 0) {
       payStatus = 'Fully Paid'
@@ -319,6 +327,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       payStatus = 'Advance Paid'
     }
 
+    const res = await apiRequest<Order>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderInput),
+    })
+
+    if (res.success && res.data) {
+      const savedOrder = res.data
+      setOrders((prev) => [savedOrder, ...prev.filter((o) => o.id !== savedOrder.id)])
+      addToast('Order Created', `Order ${savedOrder.id} for ${savedOrder.customerName} created successfully!`, 'success')
+      fetchEntities()
+      return savedOrder
+    }
+
+    const nextNum = 1001 + orders.length
+    const tempOrderId = `ORD-${nextNum}`
     const newOrder: Order = {
       ...orderInput,
       id: tempOrderId,
@@ -328,17 +351,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     setOrders((prev) => [newOrder, ...prev])
-
-    apiRequest<Order>('/orders', {
-      method: 'POST',
-      body: JSON.stringify(orderInput),
-    }).then((res) => {
-      if (res.success && res.data) {
-        setOrders((prev) => prev.map((o) => (o.id === tempOrderId ? res.data! : o)))
-      }
-      fetchEntities()
-    })
-
     addToast('Order Created', `Order ${tempOrderId} for ${newOrder.customerName} created successfully!`, 'success')
     return newOrder
   }
@@ -370,9 +382,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const generatePaymentLink = (customerName: string, amount: number, description: string, orderId?: string, customerMobile?: string): PaymentLink => {
-    const linkId = `LNK-${501 + paymentLinks.length}`
+  const generatePaymentLink = async (customerName: string, amount: number, description: string, orderId?: string, customerMobile?: string): Promise<PaymentLink> => {
     const targetOrder = orderId || 'ORD-1001'
+    const res = await apiRequest<PaymentLink>('/payments/generate-link', {
+      method: 'POST',
+      body: JSON.stringify({ customerName, amount, description, orderId: targetOrder, customerMobile }),
+    })
+
+    if (res.success && res.data) {
+      const savedLink = res.data
+      setPaymentLinks((prev) => [savedLink, ...prev.filter((l) => l.id !== savedLink.id)])
+      addToast('Payment Link Generated', `Link of ₹${amount} created for ${customerName}.`, 'success')
+      fetchEntities()
+      return savedLink
+    }
+
+    const linkId = `LNK-${501 + paymentLinks.length}`
     const newLink: PaymentLink = {
       id: linkId,
       orderId: targetOrder,
@@ -386,12 +411,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     setPaymentLinks((prev) => [newLink, ...prev])
-
-    apiRequest('/payments/generate-link', {
-      method: 'POST',
-      body: JSON.stringify({ customerName, amount, description, orderId: targetOrder, customerMobile }),
-    }).then(() => fetchEntities())
-
     addToast('Payment Link Generated', `Link of ₹${amount} created for ${customerName}.`, 'success')
     return newLink
   }
@@ -437,6 +456,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         transactions,
         paymentLinks,
         invoices,
+        bookings,
         toasts,
         sidebarOpen,
         theme,
@@ -465,6 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     </AppContext.Provider>
   )
 }
+
 
 export function useApp() {
   const context = useContext(AppContext)

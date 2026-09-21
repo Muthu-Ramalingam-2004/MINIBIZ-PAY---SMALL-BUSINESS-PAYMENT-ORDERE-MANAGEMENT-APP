@@ -81,6 +81,20 @@
   ],
   "customers": [
     {
+      "id": "CUST-DEMO-001",
+      "merchantId": "MCH-001",
+      "name": "Arun Kumar",
+      "mobile": "9876543210",
+      "email": "arun.demo@example.com",
+      "address": "45 MG Road, Connaught Place, New Delhi",
+      "notes": "Real test data customer for birthday cake order",
+      "totalOrders": 1,
+      "totalSpent": 1500,
+      "pendingAmount": 1000,
+      "lastOrderDate": "2026-09-22",
+      "createdAt": "2026-09-21"
+    },
+    {
       "id": "CUST-004",
       "merchantId": "MCH-001",
       "name": "Test Customer Aravind",
@@ -138,6 +152,24 @@
     }
   ],
   "orders": [
+    {
+      "id": "ORD-2001",
+      "merchantId": "MCH-001",
+      "customerId": "CUST-DEMO-001",
+      "customerName": "Arun Kumar",
+      "customerMobile": "9876543210",
+      "customerEmail": "arun.demo@example.com",
+      "productService": "Birthday Cake",
+      "totalAmount": 1500,
+      "advanceAmount": 500,
+      "balanceAmount": 1000,
+      "paymentStatus": "Advance Paid",
+      "orderStatus": "Confirmed",
+      "deliveryDate": "2026-09-22",
+      "deliveryTime": "06:00 PM",
+      "notes": "Eggless chocolate truffle cake with Happy Birthday Arun written",
+      "createdAt": "2026-09-21T12:15:27.974Z"
+    },
     {
       "id": "ORD-1004",
       "merchantId": "MCH-001",
@@ -213,6 +245,18 @@
   ],
   "paymentLinks": [
     {
+      "id": "LNK-DEMO-501",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-2001",
+      "customerName": "Arun Kumar",
+      "customerMobile": "9876543210",
+      "amount": 500,
+      "description": "Birthday Cake Advance",
+      "linkUrl": "http://localhost:3000/payment/ORD-2001",
+      "status": "Active",
+      "createdAt": "21/9/2026, 5:45:32 pm"
+    },
+    {
       "id": "LNK-503",
       "merchantId": "MCH-001",
       "orderId": "ORD-1004",
@@ -264,6 +308,21 @@
   ],
   "bookings": [
     {
+      "id": "BKG-ORD-2001",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-2001",
+      "customerName": "Arun Kumar",
+      "customerMobile": "9876543210",
+      "productService": "Birthday Cake",
+      "deliveryDate": "2026-09-22",
+      "deliveryTime": "06:00 PM",
+      "date": "2026-09-22",
+      "time": "06:00 PM",
+      "amount": 1500,
+      "status": "Confirmed",
+      "createdAt": "2026-09-21T12:15:29.343Z"
+    },
+    {
       "id": "BKG-1003",
       "merchantId": "MCH-001",
       "orderId": "ORD-1004",
@@ -293,6 +352,23 @@
     }
   ],
   "invoices": [
+    {
+      "id": "INV-2026-DEMO",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-2001",
+      "customerName": "Arun Kumar",
+      "customerAddress": "45 MG Road, New Delhi",
+      "customerMobile": "9876543210",
+      "customerEmail": "arun.demo@example.com",
+      "productService": "Birthday Cake",
+      "totalAmount": 1500,
+      "advanceAmount": 500,
+      "balanceAmount": 1000,
+      "paymentStatus": "Advance Paid",
+      "date": "2026-09-21",
+      "dueDate": "2026-09-22",
+      "createdAt": "2026-09-21T12:15:34.021Z"
+    },
     {
       "id": "INV-2026-003",
       "merchantId": "MCH-001",

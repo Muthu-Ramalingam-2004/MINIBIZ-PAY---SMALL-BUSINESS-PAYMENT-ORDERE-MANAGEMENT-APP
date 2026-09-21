@@ -264,16 +264,18 @@ async function ensureMerchantExists(merchantId, optionalEmail = '') {
   try {
     const { data } = await supabase.from('merchants').select('id').eq('id', validUuid).single()
     if (!data) {
-      await supabase.from('merchants').upsert({
+      const { error } = await supabase.from('merchants').upsert({
         id: validUuid,
-        business_name: 'MiniBiz Merchant',
-        owner_name: 'Merchant Owner',
+        user_id: validUuid,
+        business_name: 'Sweet Treats Bakery & Crafts',
+        owner_name: 'Priya Sharma',
         mobile: '+91 98200 12345',
         email: optionalEmail ? optionalEmail.toLowerCase() : `merchant_${validUuid.substring(0, 8)}@minibizpay.com`,
         category: 'Home Baker & Confectionery',
         platform_fee_percent: 1.0,
         dark_mode: false,
-      }).catch((e) => console.warn('[Supabase ensureMerchantExists Upsert Error]', e.message))
+      })
+      if (error) console.warn('[Supabase ensureMerchantExists Upsert Error]', error.message)
     }
   } catch (err) {
     console.warn('[Supabase ensureMerchantExists Check Error]', err.message || err)
@@ -284,9 +286,10 @@ async function ensureCustomerExists(customerId, merchantId, customerName = 'Cust
   if (!isSupabaseActive() || !customerId) return
   try {
     const validMerchantUuid = toValidUuid(merchantId)
+    await ensureMerchantExists(merchantId)
     const { data } = await supabase.from('customers').select('id').eq('id', customerId).single()
     if (!data) {
-      await supabase.from('customers').upsert({
+      const { error } = await supabase.from('customers').upsert({
         id: customerId,
         merchant_id: validMerchantUuid,
         name: customerName || 'Customer',
@@ -298,11 +301,53 @@ async function ensureCustomerExists(customerId, merchantId, customerName = 'Cust
         total_spent: 0.00,
         pending_amount: 0.00,
         last_order_date: new Date().toISOString().split('T')[0],
-      }).catch((e) => console.warn('[Supabase ensureCustomerExists Upsert Error]', e.message))
+      })
+      if (error) console.warn('[Supabase ensureCustomerExists Upsert Error]', error.message)
     }
   } catch (err) {
     console.warn('[Supabase ensureCustomerExists Check Error]', err.message || err)
   }
+}
+
+async function ensureOrderExists(orderId, merchantId, customerName = 'Customer', customerMobile = '+91 98765 43210', customerEmail = '', productService = 'Service Item', totalAmount = 0, deliveryDate = new Date().toISOString().split('T')[0]) {
+  if (!isSupabaseActive() || !orderId) return
+  try {
+    const validMerchantUuid = toValidUuid(merchantId)
+    await ensureMerchantExists(merchantId)
+    const { data } = await supabase.from('orders').select('id').eq('id', orderId).single()
+    if (!data) {
+      const { error } = await supabase.from('orders').upsert({
+        id: orderId,
+        merchant_id: validMerchantUuid,
+        customer_name: customerName || 'Customer',
+        customer_mobile: customerMobile || '+91 98765 43210',
+        customer_email: customerEmail || '',
+        product_service: productService || 'Service Item',
+        total_amount: Number(totalAmount || 0),
+        advance_amount: 0.00,
+        balance_amount: Number(totalAmount || 0),
+        payment_status: 'Unpaid',
+        order_status: 'Confirmed',
+        delivery_date: deliveryDate || new Date().toISOString().split('T')[0],
+        delivery_time: '10:30 AM',
+        notes: 'Auto-created order parent record',
+      })
+      if (error) console.warn('[Supabase ensureOrderExists Upsert Error]', error.message)
+    }
+  } catch (err) {
+    console.warn('[Supabase ensureOrderExists Check Error]', err.message || err)
+  }
+}
+
+function mergeRecords(sbList = [], dbList = []) {
+  const map = new Map()
+  for (const item of dbList) {
+    if (item && item.id) map.set(String(item.id), item)
+  }
+  for (const item of sbList) {
+    if (item && item.id) map.set(String(item.id), item)
+  }
+  return Array.from(map.values())
 }
 
 // ----------------------------------------------------
@@ -311,25 +356,25 @@ async function ensureCustomerExists(customerId, merchantId, customerName = 'Cust
 
 // 1. CUSTOMERS
 async function getCustomers(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.customers.filter((c) => c.merchantId === merchantId || toValidUuid(c.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.warn('[Supabase getCustomers Error]', error.message, error.details, error.code)
-      } else if (Array.isArray(data)) {
-        return data.map(mapCustomerFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapCustomerFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getCustomers Catch Error]', err)
     }
   }
-  return db.customers.filter((c) => c.merchantId === merchantId)
+  return dbList
 }
 
 async function getCustomerById(merchantId, id) {
@@ -349,7 +394,8 @@ async function getCustomerById(merchantId, id) {
       console.warn('[Supabase getCustomerById Catch Error]', err)
     }
   }
-  return db.customers.find((c) => c.id === id && (c.merchantId === merchantId || !merchantId)) || null
+  const normUuid = toValidUuid(merchantId)
+  return db.customers.find((c) => c.id === id && (c.merchantId === merchantId || toValidUuid(c.merchantId) === normUuid || !merchantId)) || null
 }
 
 async function saveCustomer(customer) {
@@ -377,7 +423,7 @@ async function saveCustomer(customer) {
 }
 
 async function deleteCustomer(merchantId, id) {
-  const index = db.customers.findIndex((c) => c.id === id && c.merchantId === merchantId)
+  const index = db.customers.findIndex((c) => c.id === id && (c.merchantId === merchantId || toValidUuid(c.merchantId) === toValidUuid(merchantId)))
   let removed = null
   if (index >= 0) {
     removed = db.customers.splice(index, 1)[0]
@@ -400,25 +446,25 @@ async function deleteCustomer(merchantId, id) {
 
 // 2. ORDERS
 async function getOrders(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.orders.filter((o) => o.merchantId === merchantId || toValidUuid(o.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.warn('[Supabase getOrders Error]', error.message, error.code)
-      } else if (Array.isArray(data)) {
-        return data.map(mapOrderFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapOrderFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getOrders Catch Error]', err)
     }
   }
-  return db.orders.filter((o) => o.merchantId === merchantId)
+  return dbList
 }
 
 async function getOrderById(merchantId, id) {
@@ -437,7 +483,8 @@ async function getOrderById(merchantId, id) {
       console.warn('[Supabase getOrderById Catch Error]', err)
     }
   }
-  return db.orders.find((o) => o.id === id && (o.merchantId === merchantId || !merchantId)) || null
+  const normUuid = merchantId ? toValidUuid(merchantId) : null
+  return db.orders.find((o) => o.id === id && (o.merchantId === merchantId || (normUuid && toValidUuid(o.merchantId) === normUuid) || !merchantId)) || null
 }
 
 async function saveOrder(order) {
@@ -468,7 +515,7 @@ async function saveOrder(order) {
 }
 
 async function deleteOrder(merchantId, id) {
-  const index = db.orders.findIndex((o) => o.id === id && o.merchantId === merchantId)
+  const index = db.orders.findIndex((o) => o.id === id && (o.merchantId === merchantId || toValidUuid(o.merchantId) === toValidUuid(merchantId)))
   let removed = null
   if (index >= 0) {
     removed = db.orders.splice(index, 1)[0]
@@ -491,25 +538,25 @@ async function deleteOrder(merchantId, id) {
 
 // 3. PAYMENT LINKS
 async function getPaymentLinks(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.paymentLinks.filter((l) => l.merchantId === merchantId || toValidUuid(l.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('payments')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.warn('[Supabase getPaymentLinks Error]', error.message)
-      } else if (Array.isArray(data)) {
-        return data.map(mapPaymentLinkFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapPaymentLinkFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getPaymentLinks Catch Error]', err)
     }
   }
-  return db.paymentLinks.filter((l) => l.merchantId === merchantId)
+  return dbList
 }
 
 async function savePaymentLink(link) {
@@ -524,6 +571,9 @@ async function savePaymentLink(link) {
   if (isSupabaseActive()) {
     try {
       await ensureMerchantExists(link.merchantId)
+      if (link.orderId) {
+        await ensureOrderExists(link.orderId, link.merchantId, link.customerName, link.customerMobile)
+      }
       const dbRow = mapPaymentLinkToDb(link)
       const { error } = await supabase.from('payments').upsert(dbRow)
       if (error) {
@@ -538,25 +588,25 @@ async function savePaymentLink(link) {
 
 // 4. TRANSACTIONS
 async function getTransactions(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.transactions.filter((t) => t.merchantId === merchantId || toValidUuid(t.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('date', { ascending: false })
 
-      if (error) {
-        console.warn('[Supabase getTransactions Error]', error.message)
-      } else if (Array.isArray(data)) {
-        return data.map(mapTransactionFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapTransactionFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getTransactions Catch Error]', err)
     }
   }
-  return db.transactions.filter((t) => t.merchantId === merchantId)
+  return dbList
 }
 
 async function saveTransaction(txn) {
@@ -571,6 +621,9 @@ async function saveTransaction(txn) {
   if (isSupabaseActive()) {
     try {
       await ensureMerchantExists(txn.merchantId)
+      if (txn.orderId) {
+        await ensureOrderExists(txn.orderId, txn.merchantId, txn.customerName)
+      }
       const dbRow = mapTransactionToDb(txn)
       const { error } = await supabase.from('transactions').upsert(dbRow)
       if (error) {
@@ -585,29 +638,29 @@ async function saveTransaction(txn) {
 
 // 5. BOOKINGS
 async function getBookings(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.bookings.filter((b) => b.merchantId === merchantId || toValidUuid(b.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('delivery_date', { ascending: true })
 
-      if (error) {
-        console.warn('[Supabase getBookings Error]', error.message)
-      } else if (Array.isArray(data)) {
-        return data.map(mapBookingFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapBookingFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getBookings Catch Error]', err)
     }
   }
-  return db.bookings.filter((b) => b.merchantId === merchantId)
+  return dbList
 }
 
 async function saveBooking(booking) {
-  const existingIndex = db.bookings.findIndex((b) => b.id === booking.id || b.orderId === booking.orderId)
+  const existingIndex = db.bookings.findIndex((b) => b.id === booking.id || (b.orderId && b.orderId === booking.orderId))
   if (existingIndex >= 0) {
     db.bookings[existingIndex] = booking
   } else {
@@ -618,6 +671,9 @@ async function saveBooking(booking) {
   if (isSupabaseActive()) {
     try {
       await ensureMerchantExists(booking.merchantId)
+      if (booking.orderId) {
+        await ensureOrderExists(booking.orderId, booking.merchantId, booking.customerName, booking.customerMobile, '', booking.productService, booking.amount, booking.deliveryDate || booking.date)
+      }
       const dbRow = mapBookingToDb(booking)
       const { error } = await supabase.from('bookings').upsert(dbRow)
       if (error) {
@@ -632,25 +688,25 @@ async function saveBooking(booking) {
 
 // 6. INVOICES
 async function getInvoices(merchantId) {
+  const normUuid = toValidUuid(merchantId)
+  const dbList = db.invoices.filter((i) => i.merchantId === merchantId || toValidUuid(i.merchantId) === normUuid)
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchantId)
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('merchant_id', validUuid)
+        .eq('merchant_id', normUuid)
         .order('date', { ascending: false })
 
-      if (error) {
-        console.warn('[Supabase getInvoices Error]', error.message)
-      } else if (Array.isArray(data)) {
-        return data.map(mapInvoiceFromDb)
+      if (!error && Array.isArray(data)) {
+        const sbMapped = data.map(mapInvoiceFromDb)
+        return mergeRecords(sbMapped, dbList)
       }
     } catch (err) {
       console.warn('[Supabase getInvoices Catch Error]', err)
     }
   }
-  return db.invoices.filter((i) => i.merchantId === merchantId)
+  return dbList
 }
 
 async function getInvoiceById(merchantId, id) {
@@ -670,11 +726,12 @@ async function getInvoiceById(merchantId, id) {
       console.warn('[Supabase getInvoiceById Catch Error]', err)
     }
   }
-  return db.invoices.find((i) => (i.id === id || i.orderId === id) && i.merchantId === merchantId) || null
+  const normUuid = merchantId ? toValidUuid(merchantId) : null
+  return db.invoices.find((i) => (i.id === id || i.orderId === id) && (i.merchantId === merchantId || (normUuid && toValidUuid(i.merchantId) === normUuid) || !merchantId)) || null
 }
 
 async function saveInvoice(invoice) {
-  const existingIndex = db.invoices.findIndex((i) => i.id === invoice.id || i.orderId === invoice.orderId)
+  const existingIndex = db.invoices.findIndex((i) => i.id === invoice.id || (i.orderId && i.orderId === invoice.orderId))
   if (existingIndex >= 0) {
     db.invoices[existingIndex] = invoice
   } else {
@@ -685,6 +742,9 @@ async function saveInvoice(invoice) {
   if (isSupabaseActive()) {
     try {
       await ensureMerchantExists(invoice.merchantId)
+      if (invoice.orderId) {
+        await ensureOrderExists(invoice.orderId, invoice.merchantId, invoice.customerName, invoice.customerMobile, invoice.customerEmail, invoice.productService, invoice.totalAmount, invoice.dueDate || invoice.date)
+      }
       const dbRow = mapInvoiceToDb(invoice)
       const { error } = await supabase.from('invoices').upsert(dbRow)
       if (error) {
@@ -756,6 +816,7 @@ module.exports = {
   toValidUuid,
   ensureMerchantExists,
   ensureCustomerExists,
+  ensureOrderExists,
   getCustomers,
   getCustomerById,
   saveCustomer,

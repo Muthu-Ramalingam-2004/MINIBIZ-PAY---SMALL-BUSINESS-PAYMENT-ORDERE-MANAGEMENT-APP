@@ -56,7 +56,7 @@ export default function CustomersPage() {
     setIsModalOpen(true)
   }
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
     if (!name.trim()) newErrors.name = 'Customer name is required'
@@ -70,7 +70,7 @@ export default function CustomersPage() {
     if (editingCustomer) {
       updateCustomer(editingCustomer, { name, mobile, email, address, notes })
     } else {
-      addCustomer({ name, mobile, email, address, notes })
+      await addCustomer({ name, mobile, email, address, notes })
     }
 
     setIsModalOpen(false)

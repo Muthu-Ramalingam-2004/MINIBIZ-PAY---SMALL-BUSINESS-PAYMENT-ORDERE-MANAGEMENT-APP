@@ -32,12 +32,12 @@ export function PaymentLinkModal({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!customerName || !amount) {
       addToast('Validation Error', 'Please enter customer name and valid amount.', 'error')
       return
     }
-    const link = generatePaymentLink(customerName, Number(amount), description, orderId)
+    const link = await generatePaymentLink(customerName, Number(amount), description, orderId)
     setGeneratedLink(link.linkUrl)
   }
 

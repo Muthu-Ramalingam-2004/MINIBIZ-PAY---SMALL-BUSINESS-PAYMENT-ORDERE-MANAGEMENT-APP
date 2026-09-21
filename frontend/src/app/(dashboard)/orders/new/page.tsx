@@ -49,7 +49,7 @@ export default function CreateOrderPage() {
     derivedPaymentStatus = 'Advance Paid'
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
 
@@ -76,7 +76,7 @@ export default function CreateOrderPage() {
     const finalCustMobile = isNewCustomer ? newCustMobile : selectedCustObj?.mobile || '+91 98765 43210'
     const finalCustEmail = isNewCustomer ? newCustEmail : selectedCustObj?.email || ''
 
-    const createdOrder = addOrder({
+    const createdOrder = await addOrder({
       customerId: finalCustId,
       customerName: finalCustName,
       customerMobile: finalCustMobile,

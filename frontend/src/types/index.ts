@@ -90,3 +90,20 @@ export interface MerchantProfile {
   platformFeePercent: number
   darkMode: boolean
 }
+
+export interface Booking {
+  id: string
+  merchantId?: string
+  orderId?: string
+  customerName: string
+  customerMobile?: string
+  productService: string
+  deliveryDate: string
+  deliveryTime: string
+  date?: string
+  time?: string
+  amount: number
+  status: OrderStatus
+  createdAt?: string
+}
+
