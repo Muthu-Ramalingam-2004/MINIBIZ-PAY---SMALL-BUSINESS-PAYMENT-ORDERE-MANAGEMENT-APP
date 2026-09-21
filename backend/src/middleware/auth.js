@@ -42,6 +42,8 @@ async function authenticateToken(req, res, next) {
       return res.status(401).json({ success: false, error: 'Unauthorized access.' })
     }
 
+    const supabaseService = require('../services/supabaseService')
+
     // Lookup matching merchant in persistent storage
     const cleanEmail = (decodedUser.email || '').toLowerCase()
     let merchant = db.merchants.find(
@@ -49,7 +51,6 @@ async function authenticateToken(req, res, next) {
     )
 
     if (!merchant && cleanEmail) {
-      const supabaseService = require('../services/supabaseService')
       merchant = await supabaseService.getMerchantByEmail(cleanEmail)
     }
 
@@ -58,7 +59,10 @@ async function authenticateToken(req, res, next) {
     }
 
     req.user = decodedUser
-    req.merchant = merchant
+    req.merchant = {
+      ...merchant,
+      id: supabaseService.toValidUuid(merchant.id),
+    }
     next()
   } catch (error) {
     return res.status(500).json({ success: false, error: 'Authentication error: ' + error.message })
