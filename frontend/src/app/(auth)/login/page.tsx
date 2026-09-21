@@ -14,7 +14,7 @@ type ViewMode = 'login' | 'forgot_email' | 'forgot_reset'
 function LoginFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, requestPasswordReset, resetPassword } = useApp()
+  const { login, requestPasswordReset, resetPassword, isAuthenticated, authLoading } = useApp()
 
   const [mode, setMode] = useState<ViewMode>('login')
 
@@ -32,6 +32,12 @@ function LoginFormContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [authLoading, isAuthenticated, router])
 
   useEffect(() => {
     const urlMode = searchParams.get('mode')

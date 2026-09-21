@@ -87,7 +87,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const refreshData = async () => {
+  const fetchEntities = async () => {
+    try {
+      const [cRes, oRes, lRes, tRes, iRes] = await Promise.all([
+        apiRequest<Customer[]>('/customers', { timeoutMs: 12000 }),
+        apiRequest<Order[]>('/orders', { timeoutMs: 12000 }),
+        apiRequest<PaymentLink[]>('/payments/links', { timeoutMs: 12000 }),
+        apiRequest<Transaction[]>('/payments/transactions', { timeoutMs: 12000 }),
+        apiRequest<Invoice[]>('/invoices', { timeoutMs: 12000 }),
+      ])
+
+      if (cRes.success && cRes.data) setCustomers(cRes.data)
+      if (oRes.success && oRes.data) setOrders(oRes.data)
+      if (lRes.success && lRes.data) setPaymentLinks(lRes.data)
+      if (tRes.success && tRes.data) setTransactions(tRes.data)
+      if (iRes.success && iRes.data) setInvoices(iRes.data)
+    } catch (err) {
+      console.warn('[Fetch Entities Error]', err)
+    }
+  }
+
+  const checkAuthSession = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     if (!token) {
       setMerchant(null)
@@ -102,7 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const mRes = await apiRequest<MerchantProfile>('/auth/me')
+      // 6-second max timeout for session validation so initial page load never hangs
+      const mRes = await apiRequest<MerchantProfile>('/auth/me', { timeoutMs: 6000 })
       if (mRes.success && mRes.data) {
         setMerchant(mRes.data)
         setIsAuthenticated(true)
@@ -110,20 +131,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setTheme('dark')
           if (typeof window !== 'undefined') document.documentElement.classList.add('dark')
         }
-
-        const [cRes, oRes, lRes, tRes, iRes] = await Promise.all([
-          apiRequest<Customer[]>('/customers'),
-          apiRequest<Order[]>('/orders'),
-          apiRequest<PaymentLink[]>('/payments/links'),
-          apiRequest<Transaction[]>('/payments/transactions'),
-          apiRequest<Invoice[]>('/invoices'),
-        ])
-
-        if (cRes.success && cRes.data) setCustomers(cRes.data)
-        if (oRes.success && oRes.data) setOrders(oRes.data)
-        if (lRes.success && lRes.data) setPaymentLinks(lRes.data)
-        if (tRes.success && tRes.data) setTransactions(tRes.data)
-        if (iRes.success && iRes.data) setInvoices(iRes.data)
+        setAuthLoading(false) // IMMEDIATELY unblock UI navigation
+        fetchEntities() // Fetch dashboard data asynchronously in background
       } else {
         if (typeof window !== 'undefined') localStorage.removeItem('token')
         setMerchant(null)
@@ -133,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPaymentLinks([])
         setTransactions([])
         setInvoices([])
+        setAuthLoading(false)
       }
     } catch {
       if (typeof window !== 'undefined') localStorage.removeItem('token')
@@ -143,13 +153,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPaymentLinks([])
       setTransactions([])
       setInvoices([])
-    } finally {
       setAuthLoading(false)
     }
   }
 
+  const refreshData = async () => {
+    await checkAuthSession()
+  }
+
   useEffect(() => {
-    refreshData()
+    checkAuthSession()
   }, [])
 
   const addToast = (title: string, message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success') => {
@@ -165,9 +178,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    // 25-second timeout to allow Render free-tier cold start if backend is waking up
     const res = await apiRequest<{ token: string; merchant: MerchantProfile }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      timeoutMs: 25000,
     })
 
     if (res.success && res.data) {
@@ -181,7 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') document.documentElement.classList.add('dark')
       }
       addToast('Welcome Back!', `Logged in as ${res.data.merchant.ownerName}`, 'success')
-      await refreshData()
+      fetchEntities()
       return { success: true }
     } else {
       return { success: false, error: res.error || 'Invalid email or password' }
@@ -192,6 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const res = await apiRequest<{ token: string; merchant: MerchantProfile }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
+      timeoutMs: 25000,
     })
 
     if (res.success && res.data) {
@@ -201,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMerchant(res.data.merchant)
       setIsAuthenticated(true)
       addToast('Account Created!', `Welcome to MiniBiz Pay, ${res.data.merchant.ownerName}!`, 'success')
-      await refreshData()
+      fetchEntities()
       return { success: true }
     } else {
       return { success: false, error: res.error || 'Signup failed' }
