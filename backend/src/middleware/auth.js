@@ -48,6 +48,11 @@ async function authenticateToken(req, res, next) {
       (m) => m.id === decodedUser.id || m.user_id === decodedUser.id || (cleanEmail && m.email.toLowerCase() === cleanEmail)
     )
 
+    if (!merchant && cleanEmail) {
+      const supabaseService = require('../services/supabaseService')
+      merchant = await supabaseService.getMerchantByEmail(cleanEmail)
+    }
+
     if (!merchant) {
       return res.status(401).json({ success: false, error: 'Merchant profile not found for authenticated user.' })
     }

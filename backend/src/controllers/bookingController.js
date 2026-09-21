@@ -1,14 +1,14 @@
-const { db, saveDb } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 exports.getBookings = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
     const { status, filter } = req.query
-    let result = db.bookings.filter((b) => b.merchantId === merchantId)
+    let result = await supabaseService.getBookings(merchantId)
 
     if (filter === 'today') {
       const today = new Date().toISOString().split('T')[0]
-      result = result.filter((b) => b.date === '2026-09-19' || b.date === today)
+      result = result.filter((b) => b.deliveryDate === today || b.date === today)
     } else if (filter === 'upcoming') {
       result = result.filter((b) => b.status === 'Confirmed' || b.status === 'Preparing' || b.status === 'Ready')
     } else if (filter === 'completed') {
@@ -26,16 +26,18 @@ exports.getBookings = async (req, res, next) => {
 exports.updateBooking = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const booking = db.bookings.find(
-      (b) => (b.id === req.params.id || b.orderId === req.params.id) && b.merchantId === merchantId
+    const existingBookings = await supabaseService.getBookings(merchantId)
+    const booking = existingBookings.find(
+      (b) => b.id === req.params.id || b.orderId === req.params.id
     )
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' })
     }
-    Object.assign(booking, req.body)
-    saveDb()
-    res.json({ success: true, data: booking, message: 'Booking updated' })
+    const updated = { ...booking, ...req.body, merchantId }
+    const saved = await supabaseService.saveBooking(updated)
+    res.json({ success: true, data: saved, message: 'Booking updated' })
   } catch (error) {
     next(error)
   }
 }
+

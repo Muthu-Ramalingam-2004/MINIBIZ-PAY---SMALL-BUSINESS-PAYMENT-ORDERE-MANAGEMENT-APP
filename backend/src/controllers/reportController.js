@@ -1,14 +1,14 @@
-const { db } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 exports.getReportSummary = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const merchantOrders = db.orders.filter((o) => o.merchantId === merchantId)
-    const merchantCustomers = db.customers.filter((c) => c.merchantId === merchantId)
+    const merchantOrders = await supabaseService.getOrders(merchantId)
+    const merchantCustomers = await supabaseService.getCustomers(merchantId)
 
-    const totalSales = merchantOrders.reduce((sum, o) => sum + o.totalAmount, 0)
-    const totalCollected = merchantOrders.reduce((sum, o) => sum + o.advanceAmount, 0)
-    const totalPending = merchantOrders.reduce((sum, o) => sum + o.balanceAmount, 0)
+    const totalSales = merchantOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+    const totalCollected = merchantOrders.reduce((sum, o) => sum + (o.advanceAmount || 0), 0)
+    const totalPending = merchantOrders.reduce((sum, o) => sum + (o.balanceAmount || 0), 0)
     const totalOrders = merchantOrders.length
     const totalCustomers = merchantCustomers.length
 
@@ -26,3 +26,4 @@ exports.getReportSummary = async (req, res, next) => {
     next(error)
   }
 }
+

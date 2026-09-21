@@ -1,9 +1,9 @@
-const { db } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 exports.getInvoices = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const invoices = db.invoices.filter((i) => i.merchantId === merchantId)
+    const invoices = await supabaseService.getInvoices(merchantId)
     res.json({ success: true, count: invoices.length, data: invoices })
   } catch (error) {
     next(error)
@@ -13,9 +13,7 @@ exports.getInvoices = async (req, res, next) => {
 exports.getInvoiceById = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const inv = db.invoices.find(
-      (i) => (i.id === req.params.id || i.orderId === req.params.id) && i.merchantId === merchantId
-    )
+    const inv = await supabaseService.getInvoiceById(merchantId, req.params.id)
     if (!inv) {
       return res.status(404).json({ success: false, error: 'Invoice not found' })
     }
@@ -24,3 +22,4 @@ exports.getInvoiceById = async (req, res, next) => {
     next(error)
   }
 }
+

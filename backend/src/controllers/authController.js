@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const { JWT_SECRET } = require('../middleware/auth')
 const { supabase } = require('../config/supabase')
 const { db, saveDb } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 // Secure recovery session tokens map with expiration (30 mins)
 const recoveryStore = new Map()
@@ -17,8 +18,8 @@ exports.signup = async (req, res, next) => {
 
     const cleanEmail = email.trim().toLowerCase()
 
-    // 1. Check duplicate email in persistent database
-    const existing = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+    // 1. Check duplicate email in database
+    const existing = await supabaseService.getMerchantByEmail(cleanEmail)
     if (existing) {
       return res.status(400).json({
         success: false,
@@ -78,8 +79,7 @@ exports.signup = async (req, res, next) => {
       createdAt: new Date().toISOString(),
     }
 
-    db.merchants.push(newMerchant)
-    saveDb()
+    await supabaseService.saveMerchant(newMerchant)
 
     // 4. Generate JWT Token
     const token =
@@ -111,7 +111,7 @@ exports.login = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase()
-    let merchant = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+    let merchant = await supabaseService.getMerchantByEmail(cleanEmail)
 
     const isSupabaseConfigured =
       process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
@@ -150,8 +150,7 @@ exports.login = async (req, res, next) => {
             passwordHash: bcrypt.hashSync(password, 8),
             createdAt: new Date().toISOString(),
           }
-          db.merchants.push(merchant)
-          saveDb()
+          await supabaseService.saveMerchant(merchant)
         }
       }
     }

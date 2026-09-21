@@ -1,10 +1,10 @@
-const { db, saveDb } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 exports.getOrders = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
     const { status, paymentStatus, search } = req.query
-    let result = db.orders.filter((o) => o.merchantId === merchantId)
+    let result = await supabaseService.getOrders(merchantId)
 
     if (status && status !== 'all') {
       result = result.filter((o) => o.orderStatus === status)
@@ -16,9 +16,9 @@ exports.getOrders = async (req, res, next) => {
       const s = search.toLowerCase()
       result = result.filter(
         (o) =>
-          o.id.toLowerCase().includes(s) ||
-          o.customerName.toLowerCase().includes(s) ||
-          o.productService.toLowerCase().includes(s)
+          (o.id || '').toLowerCase().includes(s) ||
+          (o.customerName || '').toLowerCase().includes(s) ||
+          (o.productService || '').toLowerCase().includes(s)
       )
     }
 
@@ -31,7 +31,7 @@ exports.getOrders = async (req, res, next) => {
 exports.getOrderById = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const order = db.orders.find((o) => o.id === req.params.id && o.merchantId === merchantId)
+    const order = await supabaseService.getOrderById(merchantId, req.params.id)
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
@@ -73,15 +73,16 @@ exports.createOrder = async (req, res, next) => {
       payStatus = 'Advance Paid'
     }
 
-    const orderId = `ORD-${1001 + db.orders.length}`
+    const existingOrders = await supabaseService.getOrders(merchantId)
+    const orderId = `ORD-${1001 + existingOrders.length}`
     const newOrder = {
       id: orderId,
       merchantId,
       customerId: customerId || `CUST-${Date.now()}`,
-      customerName,
-      customerMobile: customerMobile || '+91 98765 43210',
-      customerEmail: customerEmail || '',
-      productService,
+      customerName: customerName.trim(),
+      customerMobile: customerMobile ? customerMobile.trim() : '+91 98765 43210',
+      customerEmail: customerEmail ? customerEmail.trim() : '',
+      productService: productService.trim(),
       totalAmount: total,
       advanceAmount: advance,
       balanceAmount: balance,
@@ -89,15 +90,15 @@ exports.createOrder = async (req, res, next) => {
       orderStatus,
       deliveryDate,
       deliveryTime,
-      notes: notes || '',
+      notes: notes ? notes.trim() : '',
       createdAt: new Date().toISOString(),
     }
 
-    db.orders.unshift(newOrder)
+    await supabaseService.saveOrder(newOrder)
 
     // Auto-create Booking if Confirmed
     if (orderStatus === 'Confirmed') {
-      db.bookings.unshift({
+      await supabaseService.saveBooking({
         id: `BKG-${orderId}`,
         merchantId,
         orderId: newOrder.id,
@@ -106,6 +107,8 @@ exports.createOrder = async (req, res, next) => {
         productService: newOrder.productService,
         date: newOrder.deliveryDate,
         time: newOrder.deliveryTime,
+        deliveryDate: newOrder.deliveryDate,
+        deliveryTime: newOrder.deliveryTime,
         amount: newOrder.totalAmount,
         status: newOrder.orderStatus,
         createdAt: new Date().toISOString(),
@@ -113,8 +116,9 @@ exports.createOrder = async (req, res, next) => {
     }
 
     // Auto-create Invoice
-    db.invoices.unshift({
-      id: `INV-2026-${String(db.invoices.length + 1).padStart(3, '0')}`,
+    const existingInvoices = await supabaseService.getInvoices(merchantId)
+    await supabaseService.saveInvoice({
+      id: `INV-2026-${String(existingInvoices.length + 1).padStart(3, '0')}`,
       merchantId,
       orderId: newOrder.id,
       customerName: newOrder.customerName,
@@ -131,8 +135,6 @@ exports.createOrder = async (req, res, next) => {
       createdAt: new Date().toISOString(),
     })
 
-    saveDb()
-
     res.status(201).json({ success: true, data: newOrder, message: 'Order created successfully' })
   } catch (error) {
     next(error)
@@ -143,19 +145,22 @@ exports.updateOrderStatus = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
     const { status } = req.body
-    const order = db.orders.find((o) => o.id === req.params.id && o.merchantId === merchantId)
+    const order = await supabaseService.getOrderById(merchantId, req.params.id)
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
 
     order.orderStatus = status
+    await supabaseService.saveOrder(order)
 
     // Sync booking status
-    const booking = db.bookings.find((b) => b.orderId === order.id && b.merchantId === merchantId)
+    const existingBookings = await supabaseService.getBookings(merchantId)
+    const booking = existingBookings.find((b) => b.orderId === order.id)
     if (booking) {
       booking.status = status
+      await supabaseService.saveBooking(booking)
     } else if (status === 'Confirmed') {
-      db.bookings.unshift({
+      await supabaseService.saveBooking({
         id: `BKG-${order.id}`,
         merchantId,
         orderId: order.id,
@@ -164,13 +169,14 @@ exports.updateOrderStatus = async (req, res, next) => {
         productService: order.productService,
         date: order.deliveryDate,
         time: order.deliveryTime,
+        deliveryDate: order.deliveryDate,
+        deliveryTime: order.deliveryTime,
         amount: order.totalAmount,
         status: order.orderStatus,
         createdAt: new Date().toISOString(),
       })
     }
 
-    saveDb()
     res.json({ success: true, data: order, message: `Order status changed to ${status}` })
   } catch (error) {
     next(error)
@@ -180,14 +186,13 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.deleteOrder = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const index = db.orders.findIndex((o) => o.id === req.params.id && o.merchantId === merchantId)
-    if (index === -1) {
+    const removed = await supabaseService.deleteOrder(merchantId, req.params.id)
+    if (!removed) {
       return res.status(404).json({ success: false, error: 'Order not found' })
     }
-    const removed = db.orders.splice(index, 1)[0]
-    saveDb()
     res.json({ success: true, data: removed, message: 'Order deleted' })
   } catch (error) {
     next(error)
   }
 }
+

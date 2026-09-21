@@ -1,15 +1,18 @@
-const { db, saveDb } = require('../config/db')
+const supabaseService = require('../services/supabaseService')
 
 exports.getCustomers = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
     const { search } = req.query
-    let result = db.customers.filter((c) => c.merchantId === merchantId)
+    let result = await supabaseService.getCustomers(merchantId)
 
     if (search) {
       const s = search.toLowerCase()
       result = result.filter(
-        (c) => c.name.toLowerCase().includes(s) || c.mobile.includes(s) || (c.email && c.email.toLowerCase().includes(s))
+        (c) =>
+          (c.name || '').toLowerCase().includes(s) ||
+          (c.mobile || '').includes(s) ||
+          (c.email || '').toLowerCase().includes(s)
       )
     }
     res.json({ success: true, count: result.length, data: result })
@@ -21,7 +24,7 @@ exports.getCustomers = async (req, res, next) => {
 exports.getCustomerById = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const customer = db.customers.find((c) => c.id === req.params.id && c.merchantId === merchantId)
+    const customer = await supabaseService.getCustomerById(merchantId, req.params.id)
     if (!customer) {
       return res.status(404).json({ success: false, error: 'Customer not found' })
     }
@@ -38,23 +41,24 @@ exports.createCustomer = async (req, res, next) => {
     if (!name || !mobile) {
       return res.status(400).json({ success: false, error: 'Name and mobile number are required' })
     }
+    const existingList = await supabaseService.getCustomers(merchantId)
     const newCustomer = {
-      id: `CUST-${String(db.customers.length + 1).padStart(3, '0')}`,
+      id: `CUST-${String(existingList.length + 1).padStart(3, '0')}`,
       merchantId,
-      name,
-      mobile,
-      email: email || '',
-      address: address || '',
-      notes: notes || '',
+      name: name.trim(),
+      mobile: mobile.trim(),
+      email: email ? email.trim() : '',
+      address: address ? address.trim() : '',
+      notes: notes ? notes.trim() : '',
       totalOrders: 0,
       totalSpent: 0,
       pendingAmount: 0,
       lastOrderDate: new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString().split('T')[0],
     }
-    db.customers.unshift(newCustomer)
-    saveDb()
-    res.status(201).json({ success: true, data: newCustomer, message: 'Customer added successfully' })
+
+    const saved = await supabaseService.saveCustomer(newCustomer)
+    res.status(201).json({ success: true, data: saved, message: 'Customer added successfully' })
   } catch (error) {
     next(error)
   }
@@ -63,13 +67,13 @@ exports.createCustomer = async (req, res, next) => {
 exports.updateCustomer = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const index = db.customers.findIndex((c) => c.id === req.params.id && c.merchantId === merchantId)
-    if (index === -1) {
+    const existing = await supabaseService.getCustomerById(merchantId, req.params.id)
+    if (!existing) {
       return res.status(404).json({ success: false, error: 'Customer not found' })
     }
-    db.customers[index] = { ...db.customers[index], ...req.body }
-    saveDb()
-    res.json({ success: true, data: db.customers[index], message: 'Customer updated' })
+    const updated = { ...existing, ...req.body, merchantId }
+    const saved = await supabaseService.saveCustomer(updated)
+    res.json({ success: true, data: saved, message: 'Customer updated' })
   } catch (error) {
     next(error)
   }
@@ -78,14 +82,13 @@ exports.updateCustomer = async (req, res, next) => {
 exports.deleteCustomer = async (req, res, next) => {
   try {
     const merchantId = req.merchant.id
-    const index = db.customers.findIndex((c) => c.id === req.params.id && c.merchantId === merchantId)
-    if (index === -1) {
+    const removed = await supabaseService.deleteCustomer(merchantId, req.params.id)
+    if (!removed) {
       return res.status(404).json({ success: false, error: 'Customer not found' })
     }
-    const removed = db.customers.splice(index, 1)[0]
-    saveDb()
     res.json({ success: true, data: removed, message: 'Customer deleted' })
   } catch (error) {
     next(error)
   }
 }
+

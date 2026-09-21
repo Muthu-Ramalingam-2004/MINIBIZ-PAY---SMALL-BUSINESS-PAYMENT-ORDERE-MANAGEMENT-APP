@@ -264,10 +264,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const addCustomer = (customerData: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'pendingAmount' | 'lastOrderDate' | 'createdAt'>): Customer => {
-    const newId = `CUST-${String(customers.length + 1).padStart(3, '0')}`
+    const tempId = `CUST-${String(customers.length + 1).padStart(3, '0')}`
     const newCustomer: Customer = {
       ...customerData,
-      id: newId,
+      id: tempId,
       totalOrders: 0,
       totalSpent: 0,
       pendingAmount: 0,
@@ -277,9 +277,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setCustomers((prev) => [newCustomer, ...prev])
 
-    apiRequest('/customers', {
+    apiRequest<Customer>('/customers', {
       method: 'POST',
       body: JSON.stringify(customerData),
+    }).then((res) => {
+      if (res.success && res.data) {
+        setCustomers((prev) => prev.map((c) => (c.id === tempId ? res.data! : c)))
+        fetchEntities()
+      }
     })
 
     addToast('Customer Created', `${newCustomer.name} has been added to customer directory.`, 'success')
@@ -291,20 +296,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     apiRequest(`/customers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(customerData),
-    })
+    }).then(() => fetchEntities())
     addToast('Customer Updated', 'Customer details updated successfully.', 'success')
   }
 
   const deleteCustomer = (id: string) => {
     const target = customers.find((c) => c.id === id)
     setCustomers((prev) => prev.filter((c) => c.id !== id))
-    apiRequest(`/customers/${id}`, { method: 'DELETE' })
+    apiRequest(`/customers/${id}`, { method: 'DELETE' }).then(() => fetchEntities())
     addToast('Customer Deleted', `${target?.name || 'Customer'} removed from record.`, 'info')
   }
 
   const addOrder = (orderInput: Omit<Order, 'id' | 'paymentStatus' | 'balanceAmount' | 'createdAt'>): Order => {
     const nextNum = 1001 + orders.length
-    const orderId = `ORD-${nextNum}`
+    const tempOrderId = `ORD-${nextNum}`
     const balance = Math.max(0, orderInput.totalAmount - orderInput.advanceAmount)
 
     let payStatus: PaymentStatus = 'Unpaid'
@@ -316,7 +321,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const newOrder: Order = {
       ...orderInput,
-      id: orderId,
+      id: tempOrderId,
       balanceAmount: balance,
       paymentStatus: payStatus,
       createdAt: new Date().toISOString(),
@@ -324,44 +329,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setOrders((prev) => [newOrder, ...prev])
 
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id === orderInput.customerId || c.name.toLowerCase() === orderInput.customerName.toLowerCase()) {
-          return {
-            ...c,
-            totalOrders: c.totalOrders + 1,
-            totalSpent: c.totalSpent + orderInput.advanceAmount,
-            pendingAmount: c.pendingAmount + balance,
-            lastOrderDate: orderInput.deliveryDate,
-          }
-        }
-        return c
-      })
-    )
-
-    const newInvoice: Invoice = {
-      id: `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`,
-      orderId: newOrder.id,
-      customerName: newOrder.customerName,
-      customerAddress: newOrder.customerEmail,
-      customerMobile: newOrder.customerMobile,
-      customerEmail: newOrder.customerEmail,
-      productService: newOrder.productService,
-      totalAmount: newOrder.totalAmount,
-      advanceAmount: newOrder.advanceAmount,
-      balanceAmount: newOrder.balanceAmount,
-      paymentStatus: newOrder.paymentStatus,
-      date: new Date().toISOString().split('T')[0],
-      dueDate: newOrder.deliveryDate,
-    }
-    setInvoices((prev) => [newInvoice, ...prev])
-
-    apiRequest('/orders', {
+    apiRequest<Order>('/orders', {
       method: 'POST',
       body: JSON.stringify(orderInput),
+    }).then((res) => {
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === tempOrderId ? res.data! : o)))
+      }
+      fetchEntities()
     })
 
-    addToast('Order Created', `Order ${orderId} for ${newOrder.customerName} created successfully!`, 'success')
+    addToast('Order Created', `Order ${tempOrderId} for ${newOrder.customerName} created successfully!`, 'success')
     return newOrder
   }
 
@@ -370,7 +348,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     apiRequest(`/orders/${orderId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
-    })
+    }).then(() => fetchEntities())
     addToast('Status Updated', `Order ${orderId} status changed to ${status}.`, 'info')
   }
 
@@ -412,68 +390,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     apiRequest('/payments/generate-link', {
       method: 'POST',
       body: JSON.stringify({ customerName, amount, description, orderId: targetOrder, customerMobile }),
-    })
+    }).then(() => fetchEntities())
 
     addToast('Payment Link Generated', `Link of ₹${amount} created for ${customerName}.`, 'success')
     return newLink
   }
 
   const processMockPayment = (orderId: string, amount: number, paymentType: 'Advance' | 'Balance' | 'Full') => {
-    const newTxn: Transaction = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      orderId,
-      customerName: orders.find((o) => o.id === orderId)?.customerName || 'Customer',
-      amount,
-      paymentType,
-      status: 'Successful',
-      paymentMethod: 'UPI (Mock Payment)',
-      date: new Date().toLocaleString(),
-    }
-    setTransactions((prev) => [newTxn, ...prev])
-
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === orderId) {
-          const newAdvance = paymentType === 'Full' ? o.totalAmount : o.advanceAmount + amount
-          const newBalance = Math.max(0, o.totalAmount - newAdvance)
-          const newPayStatus: PaymentStatus = newBalance === 0 ? 'Fully Paid' : 'Advance Paid'
-          const newOrderStatus: OrderStatus = o.orderStatus === 'Pending' ? 'Confirmed' : o.orderStatus
-          return {
-            ...o,
-            advanceAmount: Math.min(o.totalAmount, newAdvance),
-            balanceAmount: newBalance,
-            paymentStatus: newPayStatus,
-            orderStatus: newOrderStatus,
-          }
-        }
-        return o
-      })
-    )
-
-    setInvoices((prev) =>
-      prev.map((inv) => {
-        if (inv.orderId === orderId) {
-          const newAdv = paymentType === 'Full' ? inv.totalAmount : inv.advanceAmount + amount
-          const newBal = Math.max(0, inv.totalAmount - newAdv)
-          return {
-            ...inv,
-            advanceAmount: Math.min(inv.totalAmount, newAdv),
-            balanceAmount: newBal,
-            paymentStatus: newBal === 0 ? 'Fully Paid' : 'Advance Paid',
-          }
-        }
-        return inv
-      })
-    )
-
-    setPaymentLinks((prev) =>
-      prev.map((l) => (l.orderId === orderId ? { ...l, status: 'Paid' } : l))
-    )
-
     apiRequest('/payments/mock-pay', {
       method: 'POST',
       body: JSON.stringify({ orderId, amount, paymentType }),
-    })
+    }).then(() => fetchEntities())
 
     addToast('Mock Payment Successful', `Received ₹${amount} for Order ${orderId}.`, 'success')
   }
