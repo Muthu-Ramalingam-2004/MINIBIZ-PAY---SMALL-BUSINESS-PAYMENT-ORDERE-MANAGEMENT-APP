@@ -280,6 +280,31 @@ async function ensureMerchantExists(merchantId, optionalEmail = '') {
   }
 }
 
+async function ensureCustomerExists(customerId, merchantId, customerName = 'Customer', customerMobile = '+91 98765 43210', customerEmail = '') {
+  if (!isSupabaseActive() || !customerId) return
+  try {
+    const validMerchantUuid = toValidUuid(merchantId)
+    const { data } = await supabase.from('customers').select('id').eq('id', customerId).single()
+    if (!data) {
+      await supabase.from('customers').upsert({
+        id: customerId,
+        merchant_id: validMerchantUuid,
+        name: customerName || 'Customer',
+        mobile: customerMobile || '+91 98765 43210',
+        email: customerEmail || '',
+        address: '',
+        notes: 'Auto-created customer record',
+        total_orders: 1,
+        total_spent: 0.00,
+        pending_amount: 0.00,
+        last_order_date: new Date().toISOString().split('T')[0],
+      }).catch((e) => console.warn('[Supabase ensureCustomerExists Upsert Error]', e.message))
+    }
+  } catch (err) {
+    console.warn('[Supabase ensureCustomerExists Check Error]', err.message || err)
+  }
+}
+
 // ----------------------------------------------------
 // DATABASE SERVICE METHODS
 // ----------------------------------------------------
@@ -427,6 +452,9 @@ async function saveOrder(order) {
   if (isSupabaseActive()) {
     try {
       await ensureMerchantExists(order.merchantId)
+      if (order.customerId) {
+        await ensureCustomerExists(order.customerId, order.merchantId, order.customerName, order.customerMobile, order.customerEmail)
+      }
       const dbRow = mapOrderToDb(order)
       const { error } = await supabase.from('orders').upsert(dbRow)
       if (error) {
@@ -726,6 +754,8 @@ async function saveMerchant(merchant) {
 
 module.exports = {
   toValidUuid,
+  ensureMerchantExists,
+  ensureCustomerExists,
   getCustomers,
   getCustomerById,
   saveCustomer,

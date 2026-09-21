@@ -35,16 +35,19 @@ router.delete('/orders/:id', authenticateToken, orderController.deleteOrder)
 
 // 4. Payments & Mock Gateway Routes
 router.get('/payments/links', authenticateToken, paymentController.getPaymentLinks)
+router.post('/payments', authenticateToken, paymentController.generatePaymentLink)
 router.post('/payments/generate-link', authenticateToken, paymentController.generatePaymentLink)
 router.post('/payments/mock-pay', paymentController.processMockPayment) // Public customer mock checkout
 router.get('/payments/transactions', authenticateToken, paymentController.getTransactions)
 
 // 5. Bookings Routes
 router.get('/bookings', authenticateToken, bookingController.getBookings)
+router.post('/bookings', authenticateToken, bookingController.createBooking)
 router.put('/bookings/:id', authenticateToken, bookingController.updateBooking)
 
 // 6. Invoices Routes
 router.get('/invoices', authenticateToken, invoiceController.getInvoices)
+router.post('/invoices', authenticateToken, invoiceController.createInvoice)
 router.get('/invoices/:id', authenticateToken, invoiceController.getInvoiceById)
 
 // 7. Reports Routes

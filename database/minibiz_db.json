@@ -82,17 +82,17 @@
   "customers": [
     {
       "id": "CUST-004",
-      "merchantId": "MCH-102",
-      "name": "Customer 1 for Apex",
-      "mobile": "+91 98888 12345",
-      "email": "cust1@apex.com",
-      "address": "",
-      "notes": "",
+      "merchantId": "MCH-001",
+      "name": "Test Customer Aravind",
+      "mobile": "+91 99887 76655",
+      "email": "aravind@example.com",
+      "address": "123 Main Street",
+      "notes": "Test note",
       "totalOrders": 0,
       "totalSpent": 0,
       "pendingAmount": 0,
-      "lastOrderDate": "2026-09-19",
-      "createdAt": "2026-09-19"
+      "lastOrderDate": "2026-09-21",
+      "createdAt": "2026-09-21"
     },
     {
       "id": "CUST-001",
@@ -138,6 +138,24 @@
     }
   ],
   "orders": [
+    {
+      "id": "ORD-1004",
+      "merchantId": "MCH-001",
+      "customerId": "CUST-004",
+      "customerName": "Test Customer Aravind",
+      "customerMobile": "+91 99887 76655",
+      "customerEmail": "aravind@example.com",
+      "productService": "Chocolate Truffle Cake 2kg",
+      "totalAmount": 2000,
+      "advanceAmount": 500,
+      "balanceAmount": 1500,
+      "paymentStatus": "Advance Paid",
+      "orderStatus": "Confirmed",
+      "deliveryDate": "2026-09-25",
+      "deliveryTime": "11:00 AM",
+      "notes": "Eggless cake",
+      "createdAt": "2026-09-21T08:34:18.484Z"
+    },
     {
       "id": "ORD-1001",
       "merchantId": "MCH-001",
@@ -195,6 +213,18 @@
   ],
   "paymentLinks": [
     {
+      "id": "LNK-503",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-1004",
+      "customerName": "Test Customer Aravind",
+      "customerMobile": "+91 99887 76655",
+      "amount": 1500,
+      "description": "Balance Payment for Cake",
+      "linkUrl": "http://localhost:3000/payment/ORD-1004",
+      "status": "Active",
+      "createdAt": "21/9/2026, 2:04:18 pm"
+    },
+    {
       "id": "LNK-501",
       "merchantId": "MCH-001",
       "orderId": "ORD-1001",
@@ -234,6 +264,21 @@
   ],
   "bookings": [
     {
+      "id": "BKG-1003",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-1004",
+      "customerName": "Test Customer Aravind",
+      "customerMobile": "+91 99887 76655",
+      "productService": "Catering Service 50 Pax",
+      "deliveryDate": "2026-09-28",
+      "deliveryTime": "01:00 PM",
+      "date": "2026-09-28",
+      "time": "01:00 PM",
+      "amount": 15000,
+      "status": "Confirmed",
+      "createdAt": "2026-09-21T08:34:18.488Z"
+    },
+    {
       "id": "BKG-ORD-1001",
       "merchantId": "MCH-001",
       "orderId": "ORD-1001",
@@ -248,6 +293,23 @@
     }
   ],
   "invoices": [
+    {
+      "id": "INV-2026-003",
+      "merchantId": "MCH-001",
+      "orderId": "ORD-1004",
+      "customerName": "Test Customer Aravind",
+      "customerAddress": "",
+      "customerMobile": "+91 99887 76655",
+      "customerEmail": "aravind@example.com",
+      "productService": "Chocolate Truffle Cake 2kg",
+      "totalAmount": 2000,
+      "advanceAmount": 500,
+      "balanceAmount": 1500,
+      "paymentStatus": "Advance Paid",
+      "date": "2026-09-21",
+      "dueDate": "2026-09-25",
+      "createdAt": "2026-09-21T08:34:18.531Z"
+    },
     {
       "id": "INV-2026-001",
       "merchantId": "MCH-001",
