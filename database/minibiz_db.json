@@ -1,17 +1,17 @@
 {
   "merchants": [
     {
-      "id": "MCH-001",
-      "user_id": "usr_priya_001",
-      "businessName": "Sweet Treats Bakery & Crafts",
-      "ownerName": "Priya Sharma",
+      "id": "f4da4de1-ad9e-4c94-8a70-82d376b2801f",
+      "user_id": "150588f6-663d-4a30-88a4-d0f875cb67ee",
+      "businessName": "Sweet Treats Bakery 834526",
+      "ownerName": "Priya Sharma 834526",
       "mobile": "+91 98200 12345",
       "email": "priya@sweettreats.com",
       "category": "Home Baker & Confectionery",
       "platformFeePercent": 1,
       "darkMode": false,
       "passwordHash": "$2a$08$ZUsp363MiNcMazR4YS42yuajR.FFeGeEuQmhCIW1k5Suq4e/.0b5q",
-      "createdAt": "2026-01-01T00:00:00.000Z"
+      "createdAt": "2026-09-21T12:15:27.656745+00:00"
     },
     {
       "id": "MCH-102",

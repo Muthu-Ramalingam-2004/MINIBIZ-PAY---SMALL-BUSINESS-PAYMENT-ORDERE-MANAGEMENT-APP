@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useApp } from '@/context/app-context'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -23,6 +23,18 @@ export default function SettingsPage() {
   // Payment settings state
   const [feePercent, setFeePercent] = useState<number>(merchant?.platformFeePercent || 1.0)
   const [testAmount, setTestAmount] = useState<number>(10000)
+
+  // Sync form inputs whenever merchant profile changes or loads
+  useEffect(() => {
+    if (merchant) {
+      setBusinessName(merchant.businessName || '')
+      setOwnerName(merchant.ownerName || '')
+      setMobile(merchant.mobile || '')
+      setEmail(merchant.email || '')
+      setCategory(merchant.category || '')
+      setFeePercent(merchant.platformFeePercent || 1.0)
+    }
+  }, [merchant])
 
   // Notifications state
   const [paymentReminders, setPaymentReminders] = useState(true)

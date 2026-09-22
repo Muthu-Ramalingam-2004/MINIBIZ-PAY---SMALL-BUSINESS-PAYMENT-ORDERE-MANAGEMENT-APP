@@ -198,7 +198,7 @@ exports.updateMerchant = async (req, res, next) => {
     }
 
     Object.assign(req.merchant, req.body)
-    saveDb()
+    await supabaseService.saveMerchant(req.merchant)
 
     const { passwordHash: _, ...updatedData } = req.merchant
     res.json({ success: true, data: updatedData, message: 'Settings saved' })

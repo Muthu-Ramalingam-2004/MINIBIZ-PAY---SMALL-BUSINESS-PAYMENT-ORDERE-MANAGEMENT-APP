@@ -759,28 +759,68 @@ async function saveInvoice(invoice) {
 
 // 7. MERCHANTS
 async function getMerchantByEmail(email) {
+  if (!email) return null
+  const cleanEmail = email.trim().toLowerCase()
   if (isSupabaseActive()) {
     try {
       const { data, error } = await supabase
         .from('merchants')
         .select('*')
-        .ilike('email', email.trim().toLowerCase())
-        .single()
+        .ilike('email', cleanEmail)
+        .limit(1)
 
       if (error) {
         console.warn('[Supabase getMerchantByEmail Error]', error.message)
-      } else if (data) {
-        return mapMerchantFromDb(data)
+      } else if (data && data.length > 0) {
+        const mapped = mapMerchantFromDb(data[0])
+        const existingIndex = db.merchants.findIndex((m) => m.id === mapped.id || (m.email && m.email.toLowerCase() === cleanEmail))
+        if (existingIndex >= 0) {
+          db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...mapped }
+        } else {
+          db.merchants.push(mapped)
+        }
+        saveDb()
+        return mapped
       }
     } catch (err) {
       console.warn('[Supabase getMerchantByEmail Catch Error]', err)
     }
   }
-  return db.merchants.find((m) => m.email.toLowerCase() === email.trim().toLowerCase()) || null
+  return db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+}
+
+async function getMerchantById(id) {
+  if (!id) return null
+  const normUuid = toValidUuid(id)
+  if (isSupabaseActive()) {
+    try {
+      const { data, error } = await supabase
+        .from('merchants')
+        .select('*')
+        .or(`id.eq.${normUuid},user_id.eq.${normUuid}`)
+        .limit(1)
+
+      if (!error && data && data.length > 0) {
+        const mapped = mapMerchantFromDb(data[0])
+        const existingIndex = db.merchants.findIndex((m) => m.id === mapped.id || toValidUuid(m.id) === normUuid)
+        if (existingIndex >= 0) {
+          db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...mapped }
+        } else {
+          db.merchants.push(mapped)
+        }
+        saveDb()
+        return mapped
+      }
+    } catch (err) {
+      console.warn('[Supabase getMerchantById Catch Error]', err)
+    }
+  }
+  return db.merchants.find((m) => m.id === id || toValidUuid(m.id) === normUuid || m.user_id === id) || null
 }
 
 async function saveMerchant(merchant) {
-  const existingIndex = db.merchants.findIndex((m) => m.id === merchant.id || m.email === merchant.email)
+  const normUuid = toValidUuid(merchant.id)
+  const existingIndex = db.merchants.findIndex((m) => m.id === merchant.id || toValidUuid(m.id) === normUuid || (m.email && m.email.toLowerCase() === (merchant.email || '').toLowerCase()))
   if (existingIndex >= 0) {
     db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...merchant }
   } else {
@@ -790,16 +830,15 @@ async function saveMerchant(merchant) {
 
   if (isSupabaseActive()) {
     try {
-      const validUuid = toValidUuid(merchant.id)
       const { error } = await supabase.from('merchants').upsert({
-        id: validUuid,
-        user_id: merchant.user_id ? toValidUuid(merchant.user_id) : null,
+        id: normUuid,
+        user_id: merchant.user_id ? toValidUuid(merchant.user_id) : normUuid,
         business_name: merchant.businessName || 'My Business',
         owner_name: merchant.ownerName || 'Merchant Owner',
         mobile: merchant.mobile || '',
         email: merchant.email ? merchant.email.toLowerCase() : '',
         category: merchant.category || 'Home Baker & Confectionery',
-        platform_fee_percent: merchant.platformFeePercent || 1.0,
+        platform_fee_percent: Number(merchant.platformFeePercent || 1.0),
         dark_mode: Boolean(merchant.darkMode),
       })
       if (error) {
@@ -835,6 +874,7 @@ module.exports = {
   getInvoiceById,
   saveInvoice,
   getMerchantByEmail,
+  getMerchantById,
   saveMerchant,
   mapCustomerFromDb,
   mapOrderFromDb,

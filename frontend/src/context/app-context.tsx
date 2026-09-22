@@ -424,14 +424,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToast('Mock Payment Successful', `Received ₹${amount} for Order ${orderId}.`, 'success')
   }
 
-  const updateMerchant = (data: Partial<MerchantProfile>) => {
+  const updateMerchant = async (data: Partial<MerchantProfile>) => {
     if (!merchant) return
     setMerchant((prev) => (prev ? { ...prev, ...data } : null))
-    apiRequest('/auth/merchant', {
+    const res = await apiRequest<MerchantProfile>('/auth/merchant', {
       method: 'PUT',
       body: JSON.stringify(data),
     })
-    addToast('Settings Saved', 'Business settings updated successfully.', 'success')
+    if (res.success && res.data) {
+      setMerchant(res.data)
+      addToast('Settings Saved', 'Business settings updated successfully.', 'success')
+    } else {
+      addToast('Update Failed', res.error || 'Failed to save business settings.', 'error')
+    }
   }
 
   const merchantOrDefault: MerchantProfile = merchant || {
