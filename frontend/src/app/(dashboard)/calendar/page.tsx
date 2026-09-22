@@ -38,7 +38,7 @@ export default function CalendarPage() {
             <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="w-4 h-4" />}>
               Prev
             </Button>
-            <span className="text-sm font-bold text-slate-900 px-3">{currentMonth}</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 px-3">{currentMonth}</span>
             <Button variant="outline" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
               Next
             </Button>

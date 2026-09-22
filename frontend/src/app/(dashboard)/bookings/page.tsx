@@ -134,16 +134,16 @@ export default function BookingsPage() {
               {filteredBookings.map((booking) => (
                 <TableRow key={booking.id}>
                   <TableCell>
-                    <p className="font-bold text-slate-900">{booking.customerName}</p>
-                    <p className="text-[11px] text-slate-400">{booking.customerMobile}</p>
+                    <p className="font-bold text-slate-900 dark:text-slate-100">{booking.customerName}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">{booking.customerMobile}</p>
                   </TableCell>
-                  <TableCell className="font-mono font-bold text-brand-600">{booking.orderId}</TableCell>
-                  <TableCell className="font-medium text-slate-700 max-w-xs truncate">{booking.productService}</TableCell>
-                  <TableCell className="font-semibold text-slate-900">{formatDate(booking.deliveryDate)}</TableCell>
-                  <TableCell className="text-xs text-slate-600 flex items-center gap-1 py-4">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" /> {booking.deliveryTime}
+                  <TableCell className="font-mono font-bold text-brand-600 dark:text-brand-400">{booking.orderId}</TableCell>
+                  <TableCell className="font-medium text-slate-700 dark:text-slate-300 max-w-xs truncate">{booking.productService}</TableCell>
+                  <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{formatDate(booking.deliveryDate)}</TableCell>
+                  <TableCell className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1 py-4">
+                    <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" /> {booking.deliveryTime}
                   </TableCell>
-                  <TableCell className="font-bold text-slate-900">{formatCurrency(booking.amount)}</TableCell>
+                  <TableCell className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(booking.amount)}</TableCell>
                   <TableCell>
                     <StatusBadge status={booking.status} />
                   </TableCell>

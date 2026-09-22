@@ -58,16 +58,16 @@ export default function CustomerDetailPage() {
       {/* 3 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 border-l-4 border-l-brand-600">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Orders</span>
-          <p className="text-2xl font-black text-slate-900 mt-1">{customerOrders.length}</p>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Orders</span>
+          <p className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{customerOrders.length}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-emerald-600">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Paid</span>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{formatCurrency(customer.totalSpent)}</p>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Paid</span>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(customer.totalSpent)}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-rose-600">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Balance</span>
-          <p className="text-2xl font-black text-rose-600 mt-1">{formatCurrency(customer.pendingAmount)}</p>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Balance</span>
+          <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{formatCurrency(customer.pendingAmount)}</p>
         </Card>
       </div>
 
@@ -76,24 +76,24 @@ export default function CustomerDetailPage() {
         <CardHeader>
           <CardTitle>Contact Information & Preferences</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700 dark:text-slate-300">
           <div className="space-y-3">
             <div className="flex items-center gap-2.5">
-              <Phone className="w-4 h-4 text-slate-400" />
-              <span className="font-semibold">{customer.mobile}</span>
+              <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{customer.mobile}</span>
             </div>
             <div className="flex items-center gap-2.5">
-              <Mail className="w-4 h-4 text-slate-400" />
-              <span>{customer.email || 'No email provided'}</span>
+              <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <span className="text-slate-700 dark:text-slate-300">{customer.email || 'No email provided'}</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-              <span>{customer.address || 'No address provided'}</span>
+              <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5" />
+              <span className="text-slate-700 dark:text-slate-300">{customer.address || 'No address provided'}</span>
             </div>
           </div>
           <div>
-            <span className="font-semibold text-slate-900 block mb-1">Customer Preferences & Notes:</span>
-            <p className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-slate-600 leading-relaxed italic">
+            <span className="font-semibold text-slate-900 dark:text-slate-100 block mb-1">Customer Preferences & Notes:</span>
+            <p className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 leading-relaxed italic">
               {customer.notes || 'No special notes logged for this customer.'}
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function CustomerDetailPage() {
         </CardHeader>
         <CardContent className="p-0">
           {customerOrders.length === 0 ? (
-            <p className="p-6 text-xs text-center text-slate-500">No past orders for this customer yet.</p>
+            <p className="p-6 text-xs text-center text-slate-500 dark:text-slate-400">No past orders for this customer yet.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -125,11 +125,11 @@ export default function CustomerDetailPage() {
               <TableBody>
                 {customerOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono font-bold text-brand-600">{order.id}</TableCell>
-                    <TableCell className="font-medium text-slate-800">{order.productService}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell className="text-emerald-600 font-semibold">{formatCurrency(order.advanceAmount)}</TableCell>
-                    <TableCell className="text-rose-600 font-semibold">{formatCurrency(order.balanceAmount)}</TableCell>
+                    <TableCell className="font-mono font-bold text-brand-600 dark:text-brand-400">{order.id}</TableCell>
+                    <TableCell className="font-medium text-slate-800 dark:text-slate-200">{order.productService}</TableCell>
+                    <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(order.totalAmount)}</TableCell>
+                    <TableCell className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(order.advanceAmount)}</TableCell>
+                    <TableCell className="text-rose-600 dark:text-rose-400 font-semibold">{formatCurrency(order.balanceAmount)}</TableCell>
                     <TableCell>
                       <StatusBadge status={order.paymentStatus} />
                     </TableCell>
@@ -158,7 +158,7 @@ export default function CustomerDetailPage() {
         </CardHeader>
         <CardContent className="p-0">
           {customerTxns.length === 0 ? (
-            <p className="p-6 text-xs text-center text-slate-500">No mock transactions recorded yet.</p>
+            <p className="p-6 text-xs text-center text-slate-500 dark:text-slate-400">No mock transactions recorded yet.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -175,17 +175,17 @@ export default function CustomerDetailPage() {
               <TableBody>
                 {customerTxns.map((txn) => (
                   <TableRow key={txn.id}>
-                    <TableCell className="font-mono font-semibold text-slate-800">{txn.id}</TableCell>
-                    <TableCell className="font-mono text-brand-600">{txn.orderId}</TableCell>
-                    <TableCell className="font-bold text-emerald-600">{formatCurrency(txn.amount)}</TableCell>
-                    <TableCell className="text-xs font-semibold text-slate-700">{txn.paymentType}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{txn.paymentMethod}</TableCell>
+                    <TableCell className="font-mono font-semibold text-slate-800 dark:text-slate-200">{txn.id}</TableCell>
+                    <TableCell className="font-mono text-brand-600 dark:text-brand-400">{txn.orderId}</TableCell>
+                    <TableCell className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(txn.amount)}</TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-300">{txn.paymentType}</TableCell>
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">{txn.paymentMethod}</TableCell>
                     <TableCell>
-                      <span className="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">
+                      <span className="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-full">
                         {txn.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{txn.date}</TableCell>
+                    <TableCell className="text-xs text-slate-500 dark:text-slate-400">{txn.date}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

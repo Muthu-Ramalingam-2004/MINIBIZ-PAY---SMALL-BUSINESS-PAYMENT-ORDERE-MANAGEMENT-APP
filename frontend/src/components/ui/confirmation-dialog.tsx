@@ -32,8 +32,8 @@ export function ConfirmationDialog({
         <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isDanger ? 'bg-rose-100 text-rose-600' : 'bg-brand-100 text-brand-600'}`}>
           <AlertTriangle className="w-6 h-6" />
         </div>
-        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-        <p className="text-xs text-slate-500 mt-1.5 mb-6">{description}</p>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 mb-6">{description}</p>
         <div className="flex items-center gap-3 w-full">
           <Button variant="outline" className="flex-1" onClick={onClose}>
             {cancelLabel}

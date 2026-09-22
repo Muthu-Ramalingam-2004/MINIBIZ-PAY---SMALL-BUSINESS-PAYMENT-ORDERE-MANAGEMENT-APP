@@ -42,11 +42,11 @@ export default function PaymentsPage() {
       />
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
         <button
           onClick={() => setActiveTab('links')}
           className={`pb-3 text-xs font-bold transition-colors relative ${
-            activeTab === 'links' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'links' ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           }`}
         >
           Payment Links ({paymentLinks.length})
@@ -54,7 +54,7 @@ export default function PaymentsPage() {
         <button
           onClick={() => setActiveTab('pending')}
           className={`pb-3 text-xs font-bold transition-colors relative ${
-            activeTab === 'pending' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'pending' ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           }`}
         >
           Pending Payments ({pendingOrders.length})
@@ -62,7 +62,7 @@ export default function PaymentsPage() {
         <button
           onClick={() => setActiveTab('transactions')}
           className={`pb-3 text-xs font-bold transition-colors relative ${
-            activeTab === 'transactions' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'transactions' ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           }`}
         >
           Transactions ({transactions.length})
@@ -75,7 +75,7 @@ export default function PaymentsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Generated Payment Links</CardTitle>
-              <p className="text-xs text-slate-500">MOCK links for advance and balance collections</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">MOCK links for advance and balance collections</p>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -93,40 +93,40 @@ export default function PaymentsPage() {
                 <TableBody>
                   {paymentLinks.map((link) => (
                     <TableRow key={link.id}>
-                      <TableCell className="font-mono font-bold text-brand-600">{link.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-900">{link.customerName}</TableCell>
-                      <TableCell className="text-xs text-slate-600 max-w-xs truncate">{link.description}</TableCell>
-                      <TableCell className="font-bold text-slate-900">{formatCurrency(link.amount)}</TableCell>
+                      <TableCell className="font-mono font-bold text-brand-600 dark:text-brand-400">{link.id}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{link.customerName}</TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate">{link.description}</TableCell>
+                      <TableCell className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(link.amount)}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-0.5 text-xs font-bold rounded-full ${
                             link.status === 'Paid'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                               : link.status === 'Active'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-600'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
                           {link.status}
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-500">{link.createdAt}</TableCell>
+                      <TableCell className="text-xs text-slate-500 dark:text-slate-400">{link.createdAt}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="p-1.5 h-8 text-slate-600"
+                            className="p-1.5 h-8 text-slate-600 dark:text-slate-400"
                             onClick={() => handleCopy(link.linkUrl, link.id)}
                             title="Copy Mock Link"
                           >
-                            {copiedId === link.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            {copiedId === link.id ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-4 h-4" />}
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="p-1.5 h-8 text-emerald-600"
+                            className="p-1.5 h-8 text-emerald-600 dark:text-emerald-400"
                             title="Share on WhatsApp"
                             onClick={() =>
                               setWhatsappModal({
@@ -141,7 +141,7 @@ export default function PaymentsPage() {
                           </Button>
 
                           <Link href={`/payment/${link.orderId || 'ORD-1001'}`} target="_blank">
-                            <Button variant="ghost" size="sm" className="p-1.5 h-8 text-brand-600" title="Open Payment Page">
+                            <Button variant="ghost" size="sm" className="p-1.5 h-8 text-brand-600 dark:text-brand-400" title="Open Payment Page">
                               <ExternalLink className="w-4 h-4" />
                             </Button>
                           </Link>
@@ -162,7 +162,7 @@ export default function PaymentsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Orders with Pending Balance</CardTitle>
-              <p className="text-xs text-slate-500">Send WhatsApp payment reminders directly to clients</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Send WhatsApp payment reminders directly to clients</p>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -180,15 +180,15 @@ export default function PaymentsPage() {
                 <TableBody>
                   {pendingOrders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-mono font-bold text-brand-600">{order.id}</TableCell>
+                      <TableCell className="font-mono font-bold text-brand-600 dark:text-brand-400">{order.id}</TableCell>
                       <TableCell>
-                        <p className="font-semibold text-slate-900">{order.customerName}</p>
-                        <p className="text-[11px] text-slate-400">{order.customerMobile}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{order.customerName}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{order.customerMobile}</p>
                       </TableCell>
-                      <TableCell className="font-medium text-slate-700">{formatCurrency(order.totalAmount)}</TableCell>
-                      <TableCell className="text-emerald-600 font-semibold">{formatCurrency(order.advanceAmount)}</TableCell>
-                      <TableCell className="text-rose-600 font-bold text-base">{formatCurrency(order.balanceAmount)}</TableCell>
-                      <TableCell className="text-xs text-slate-500">{formatDate(order.deliveryDate)}</TableCell>
+                      <TableCell className="font-medium text-slate-700 dark:text-slate-200">{formatCurrency(order.totalAmount)}</TableCell>
+                      <TableCell className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(order.advanceAmount)}</TableCell>
+                      <TableCell className="text-rose-600 dark:text-rose-400 font-bold text-base">{formatCurrency(order.balanceAmount)}</TableCell>
+                      <TableCell className="text-xs text-slate-500 dark:text-slate-400">{formatDate(order.deliveryDate)}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="success"
@@ -238,18 +238,18 @@ export default function PaymentsPage() {
               <TableBody>
                 {transactions.map((txn) => (
                   <TableRow key={txn.id}>
-                    <TableCell className="font-mono font-bold text-slate-900">{txn.id}</TableCell>
-                    <TableCell className="font-mono text-brand-600">{txn.orderId}</TableCell>
-                    <TableCell className="font-semibold text-slate-800">{txn.customerName}</TableCell>
-                    <TableCell className="font-bold text-emerald-600 text-base">{formatCurrency(txn.amount)}</TableCell>
-                    <TableCell className="text-xs font-semibold text-slate-700">{txn.paymentType}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{txn.paymentMethod}</TableCell>
+                    <TableCell className="font-mono font-bold text-slate-900 dark:text-slate-100">{txn.id}</TableCell>
+                    <TableCell className="font-mono text-brand-600 dark:text-brand-400">{txn.orderId}</TableCell>
+                    <TableCell className="font-semibold text-slate-800 dark:text-slate-100">{txn.customerName}</TableCell>
+                    <TableCell className="font-bold text-emerald-600 dark:text-emerald-400 text-base">{formatCurrency(txn.amount)}</TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-300">{txn.paymentType}</TableCell>
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">{txn.paymentMethod}</TableCell>
                     <TableCell>
-                      <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">
+                      <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-full">
                         {txn.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{txn.date}</TableCell>
+                    <TableCell className="text-xs text-slate-500 dark:text-slate-400">{txn.date}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

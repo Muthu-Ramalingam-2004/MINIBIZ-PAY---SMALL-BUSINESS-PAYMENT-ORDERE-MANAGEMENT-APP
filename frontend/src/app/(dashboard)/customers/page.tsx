@@ -99,7 +99,7 @@ export default function CustomersPage() {
       {/* Search Bar */}
       <div className="flex items-center justify-between gap-4">
         <SearchBar value={search} onChange={setSearch} placeholder="Search customers by name, phone, email..." />
-        <span className="text-xs text-slate-500 font-semibold">Total: {filteredCustomers.length} Customers</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Total: {filteredCustomers.length} Customers</span>
       </div>
 
       {/* Customer List */}
@@ -132,41 +132,41 @@ export default function CustomersPage() {
                   <TableRow key={cust.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 font-bold text-xs flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-bold text-xs flex items-center justify-center shrink-0">
                           {cust.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">{cust.name}</p>
-                          <span className="text-[10px] text-slate-400 font-mono">{cust.id}</span>
+                          <p className="font-bold text-slate-900 dark:text-slate-100">{cust.name}</p>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{cust.id}</span>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-700">{cust.mobile}</TableCell>
-                    <TableCell className="text-xs text-slate-600 max-w-xs truncate">{cust.email || '—'}</TableCell>
-                    <TableCell className="font-semibold text-slate-800 text-center">{cust.totalOrders}</TableCell>
-                    <TableCell className="font-bold text-slate-900">{formatCurrency(cust.totalSpent)}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-700 dark:text-slate-300">{cust.mobile}</TableCell>
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate">{cust.email || '—'}</TableCell>
+                    <TableCell className="font-semibold text-slate-800 dark:text-slate-200 text-center">{cust.totalOrders}</TableCell>
+                    <TableCell className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(cust.totalSpent)}</TableCell>
                     <TableCell>
                       {cust.pendingAmount > 0 ? (
-                        <span className="font-bold text-rose-600 text-xs">{formatCurrency(cust.pendingAmount)}</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400 text-xs">{formatCurrency(cust.pendingAmount)}</span>
                       ) : (
-                        <span className="text-xs text-emerald-600 font-semibold">Cleared</span>
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Cleared</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDate(cust.lastOrderDate)}</TableCell>
+                    <TableCell className="text-xs text-slate-500 dark:text-slate-400">{formatDate(cust.lastOrderDate)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/customers/${cust.id}`}>
                           <Button variant="ghost" size="sm" className="p-1.5 h-8">
-                            <Eye className="w-4 h-4 text-slate-600" />
+                            <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                           </Button>
                         </Link>
                         <Button variant="ghost" size="sm" className="p-1.5 h-8" onClick={() => handleOpenEdit(cust)}>
-                          <Edit2 className="w-4 h-4 text-slate-600" />
+                          <Edit2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-1.5 h-8 text-rose-600 hover:bg-rose-50"
+                          className="p-1.5 h-8 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                           onClick={() => setDeletingCustomerId(cust.id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -204,7 +204,7 @@ export default function CustomersPage() {
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
             placeholder="e.g. +91 98765 43210"
-            leftIcon={<Phone className="w-4 h-4 text-slate-400" />}
+            leftIcon={<Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
             error={errors.mobile}
             required
           />
@@ -215,7 +215,7 @@ export default function CustomersPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. rahul@example.com"
-            leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
+            leftIcon={<Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
           />
 
           <Input
@@ -223,23 +223,23 @@ export default function CustomersPage() {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Full street address, area, city"
-            leftIcon={<MapPin className="w-4 h-4 text-slate-400" />}
+            leftIcon={<MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
           />
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
               Customer Notes & Preferences
             </label>
             <textarea
               rows={3}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Preferred delivery time, eggless preference, allergy notes..."
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>

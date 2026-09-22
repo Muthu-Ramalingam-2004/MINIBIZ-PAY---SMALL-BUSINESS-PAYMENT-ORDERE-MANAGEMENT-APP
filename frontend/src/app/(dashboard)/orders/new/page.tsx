@@ -113,7 +113,7 @@ export default function CreateOrderPage() {
               <button
                 type="button"
                 onClick={() => setIsNewCustomer(!isNewCustomer)}
-                className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 flex items-center gap-1"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 {isNewCustomer ? 'Select Existing Customer' : '+ Add New Customer'}
@@ -200,7 +200,7 @@ export default function CreateOrderPage() {
                 />
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Balance Due (₹)
                   </label>
                   <div className="relative rounded-lg shadow-sm">
@@ -209,11 +209,11 @@ export default function CreateOrderPage() {
                       readOnly
                       disabled
                       value={formatCurrency(calculatedBalance)}
-                      className="block w-full rounded-lg border border-slate-200 bg-slate-100 py-2 px-3 text-sm font-bold text-rose-600 cursor-not-allowed"
+                      className="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 py-2 px-3 text-sm font-bold text-rose-600 dark:text-rose-400 cursor-not-allowed"
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
-                    <Calculator className="w-3 h-3 text-brand-600" /> Auto-calculated: Total - Advance
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <Calculator className="w-3 h-3 text-brand-600 dark:text-brand-400" /> Auto-calculated: Total - Advance
                   </p>
                 </div>
               </div>
@@ -250,12 +250,12 @@ export default function CreateOrderPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Special Notes / Custom Requirements
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. Blue buttercream frosting with text Happy Birthday Arav..."
@@ -278,55 +278,55 @@ export default function CreateOrderPage() {
 
         {/* Right Sticky Order Summary Card (Desktop) */}
         <div className="space-y-6">
-          <Card className="sticky top-20 border-brand-200">
-            <CardHeader className="bg-brand-50/50">
-              <CardTitle className="text-brand-900">Live Order Summary</CardTitle>
+          <Card className="sticky top-20 border-brand-200 dark:border-brand-900/50">
+            <CardHeader className="bg-brand-50/50 dark:bg-brand-950/40">
+              <CardTitle className="text-brand-900 dark:text-brand-200">Live Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Customer:</span>
-                  <span className="font-bold text-slate-900">
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Customer:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
                     {isNewCustomer
                       ? newCustName || 'New Customer'
                       : customers.find((c) => c.id === selectedCustomerId)?.name || 'Select Customer'}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Product:</span>
-                  <span className="font-medium text-slate-800 text-right truncate max-w-[160px]">
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Product:</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 text-right truncate max-w-[160px]">
                     {productService || '—'}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Total Amount:</span>
-                  <span className="font-bold text-slate-900">{formatCurrency(numTotal)}</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Total Amount:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(numTotal)}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Advance Paid:</span>
-                  <span className="font-bold text-emerald-600">{formatCurrency(numAdvance)}</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Advance Paid:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(numAdvance)}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Balance Due:</span>
-                  <span className="font-bold text-rose-600 text-sm">{formatCurrency(calculatedBalance)}</span>
+                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Balance Due:</span>
+                  <span className="font-bold text-rose-600 dark:text-rose-400 text-sm">{formatCurrency(calculatedBalance)}</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-slate-500">Payment Status:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Payment Status:</span>
                   <StatusBadge status={derivedPaymentStatus} />
                 </div>
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-slate-500">Order Status:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Order Status:</span>
                   <StatusBadge status={orderStatus} />
                 </div>
-                <div className="flex justify-between py-1 border-t border-slate-100">
-                  <span className="text-slate-500">Delivery Date:</span>
-                  <span className="font-semibold text-slate-800">
+                <div className="flex justify-between py-1 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">Delivery Date:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {formatDate(deliveryDate)} at {deliveryTime}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg text-[11px] text-slate-600 border border-slate-200">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-[11px] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 ✨ Generating this order will automatically generate a printable invoice and update your financial dashboard.
               </div>
             </CardContent>
