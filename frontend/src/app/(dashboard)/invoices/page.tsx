@@ -39,31 +39,31 @@ export default function InvoicesPage() {
             <TableBody>
               {invoices.map((inv) => (
                 <TableRow key={inv.id}>
-                  <TableCell className="font-mono font-bold text-slate-900">{inv.id}</TableCell>
+                  <TableCell className="font-mono font-bold text-slate-900 dark:text-slate-100">{inv.id}</TableCell>
                   <TableCell>
-                    <p className="font-semibold text-slate-900">{inv.customerName}</p>
-                    <p className="text-[11px] text-slate-400">{inv.customerMobile}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{inv.customerName}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">{inv.customerMobile}</p>
                   </TableCell>
-                  <TableCell className="font-mono text-brand-600">{inv.orderId}</TableCell>
-                  <TableCell className="font-bold text-slate-900">{formatCurrency(inv.totalAmount)}</TableCell>
-                  <TableCell className="font-semibold text-emerald-600">{formatCurrency(inv.advanceAmount)}</TableCell>
-                  <TableCell className="font-bold text-rose-600">{formatCurrency(inv.balanceAmount)}</TableCell>
+                  <TableCell className="font-mono text-brand-600 dark:text-brand-400">{inv.orderId}</TableCell>
+                  <TableCell className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(inv.totalAmount)}</TableCell>
+                  <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(inv.advanceAmount)}</TableCell>
+                  <TableCell className="font-bold text-rose-600 dark:text-rose-400">{formatCurrency(inv.balanceAmount)}</TableCell>
                   <TableCell>
                     <StatusBadge status={inv.paymentStatus} />
                   </TableCell>
-                  <TableCell className="text-xs text-slate-500">{formatDate(inv.date)}</TableCell>
+                  <TableCell className="text-xs text-slate-500 dark:text-slate-400">{formatDate(inv.date)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Link href={`/invoices/${inv.id}`}>
-                        <Button variant="ghost" size="sm" className="p-1.5 h-8">
-                          <Eye className="w-4 h-4 text-slate-600" />
+                        <Button variant="ghost" size="sm" className="p-1.5 h-8 text-slate-600 dark:text-slate-400">
+                          <Eye className="w-4 h-4" />
                         </Button>
                       </Link>
 
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="p-1.5 h-8 text-emerald-600"
+                        className="p-1.5 h-8 text-emerald-600 dark:text-emerald-400"
                         onClick={() =>
                           setWhatsappModal({
                             isOpen: true,
@@ -77,7 +77,7 @@ export default function InvoicesPage() {
                       </Button>
 
                       <Link href={`/invoices/${inv.id}`}>
-                        <Button variant="ghost" size="sm" className="p-1.5 h-8 text-brand-600">
+                        <Button variant="ghost" size="sm" className="p-1.5 h-8 text-brand-600 dark:text-brand-400">
                           <Printer className="w-4 h-4" />
                         </Button>
                       </Link>
