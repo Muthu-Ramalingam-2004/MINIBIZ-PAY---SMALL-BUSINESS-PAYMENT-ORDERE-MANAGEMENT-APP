@@ -243,14 +243,15 @@ function mapMerchantFromDb(row) {
   return {
     id: row.id,
     user_id: row.user_id,
-    businessName: row.business_name || '',
-    ownerName: row.owner_name || '',
+    businessName: row.business_name || row.businessName || '',
+    ownerName: row.owner_name || row.ownerName || '',
     mobile: row.mobile || '',
     email: row.email || '',
     category: row.category || 'Home Baker & Confectionery',
-    platformFeePercent: Number(row.platform_fee_percent || 1.0),
-    darkMode: Boolean(row.dark_mode),
-    createdAt: row.created_at,
+    platformFeePercent: Number(row.platform_fee_percent || row.platformFeePercent || 1.0),
+    darkMode: Boolean(row.dark_mode || row.darkMode),
+    passwordHash: row.password_hash || row.passwordHash || undefined,
+    createdAt: row.created_at || row.createdAt,
   }
 }
 
@@ -761,6 +762,8 @@ async function saveInvoice(invoice) {
 async function getMerchantByEmail(email) {
   if (!email) return null
   const cleanEmail = email.trim().toLowerCase()
+  const localMerchant = db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+
   if (isSupabaseActive()) {
     try {
       const { data, error } = await supabase
@@ -773,25 +776,32 @@ async function getMerchantByEmail(email) {
         console.warn('[Supabase getMerchantByEmail Error]', error.message)
       } else if (data && data.length > 0) {
         const mapped = mapMerchantFromDb(data[0])
-        const existingIndex = db.merchants.findIndex((m) => m.id === mapped.id || (m.email && m.email.toLowerCase() === cleanEmail))
+        const mergedMerchant = {
+          ...localMerchant,
+          ...mapped,
+          passwordHash: mapped.passwordHash || (localMerchant ? localMerchant.passwordHash : undefined),
+        }
+        const existingIndex = db.merchants.findIndex((m) => m.id === mergedMerchant.id || (m.email && m.email.toLowerCase() === cleanEmail))
         if (existingIndex >= 0) {
-          db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...mapped }
+          db.merchants[existingIndex] = mergedMerchant
         } else {
-          db.merchants.push(mapped)
+          db.merchants.push(mergedMerchant)
         }
         saveDb()
-        return mapped
+        return mergedMerchant
       }
     } catch (err) {
       console.warn('[Supabase getMerchantByEmail Catch Error]', err)
     }
   }
-  return db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+  return localMerchant
 }
 
 async function getMerchantById(id) {
   if (!id) return null
   const normUuid = toValidUuid(id)
+  const localMerchant = db.merchants.find((m) => m.id === id || toValidUuid(m.id) === normUuid || m.user_id === id) || null
+
   if (isSupabaseActive()) {
     try {
       const { data, error } = await supabase
@@ -802,35 +812,51 @@ async function getMerchantById(id) {
 
       if (!error && data && data.length > 0) {
         const mapped = mapMerchantFromDb(data[0])
-        const existingIndex = db.merchants.findIndex((m) => m.id === mapped.id || toValidUuid(m.id) === normUuid)
+        const mergedMerchant = {
+          ...localMerchant,
+          ...mapped,
+          passwordHash: mapped.passwordHash || (localMerchant ? localMerchant.passwordHash : undefined),
+        }
+        const existingIndex = db.merchants.findIndex((m) => m.id === mergedMerchant.id || toValidUuid(m.id) === normUuid)
         if (existingIndex >= 0) {
-          db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...mapped }
+          db.merchants[existingIndex] = mergedMerchant
         } else {
-          db.merchants.push(mapped)
+          db.merchants.push(mergedMerchant)
         }
         saveDb()
-        return mapped
+        return mergedMerchant
       }
     } catch (err) {
       console.warn('[Supabase getMerchantById Catch Error]', err)
     }
   }
-  return db.merchants.find((m) => m.id === id || toValidUuid(m.id) === normUuid || m.user_id === id) || null
+  return localMerchant
 }
 
 async function saveMerchant(merchant) {
   const normUuid = toValidUuid(merchant.id)
-  const existingIndex = db.merchants.findIndex((m) => m.id === merchant.id || toValidUuid(m.id) === normUuid || (m.email && m.email.toLowerCase() === (merchant.email || '').toLowerCase()))
+  const cleanEmail = (merchant.email || '').toLowerCase()
+  const existingIndex = db.merchants.findIndex((m) => m.id === merchant.id || toValidUuid(m.id) === normUuid || (m.email && m.email.toLowerCase() === cleanEmail))
+
+  const existingHash = existingIndex >= 0 ? db.merchants[existingIndex].passwordHash : undefined
+  const finalPasswordHash = merchant.passwordHash || existingHash
+
+  const merchantToSave = {
+    ...(existingIndex >= 0 ? db.merchants[existingIndex] : {}),
+    ...merchant,
+    passwordHash: finalPasswordHash,
+  }
+
   if (existingIndex >= 0) {
-    db.merchants[existingIndex] = { ...db.merchants[existingIndex], ...merchant }
+    db.merchants[existingIndex] = merchantToSave
   } else {
-    db.merchants.push(merchant)
+    db.merchants.push(merchantToSave)
   }
   saveDb()
 
   if (isSupabaseActive()) {
     try {
-      const { error } = await supabase.from('merchants').upsert({
+      const upsertObj = {
         id: normUuid,
         user_id: merchant.user_id ? toValidUuid(merchant.user_id) : normUuid,
         business_name: merchant.businessName || 'My Business',
@@ -840,7 +866,11 @@ async function saveMerchant(merchant) {
         category: merchant.category || 'Home Baker & Confectionery',
         platform_fee_percent: Number(merchant.platformFeePercent || 1.0),
         dark_mode: Boolean(merchant.darkMode),
-      })
+      }
+      if (finalPasswordHash) {
+        upsertObj.password_hash = finalPasswordHash
+      }
+      const { error } = await supabase.from('merchants').upsert(upsertObj)
       if (error) {
         console.warn('[Supabase saveMerchant Error]', error.message)
       }
@@ -848,7 +878,7 @@ async function saveMerchant(merchant) {
       console.warn('[Supabase saveMerchant Catch Error]', err)
     }
   }
-  return merchant
+  return merchantToSave
 }
 
 module.exports = {

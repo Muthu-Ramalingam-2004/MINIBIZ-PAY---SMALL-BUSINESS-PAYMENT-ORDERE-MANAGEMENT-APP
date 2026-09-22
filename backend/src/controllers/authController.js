@@ -113,6 +113,19 @@ exports.login = async (req, res, next) => {
     const cleanEmail = email.trim().toLowerCase()
     let merchant = await supabaseService.getMerchantByEmail(cleanEmail)
 
+    // Fallback check against local db memory if passwordHash was missing from remote record
+    if (merchant && !merchant.passwordHash) {
+      const localM = db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail)
+      if (localM && localM.passwordHash) {
+        merchant.passwordHash = localM.passwordHash
+      }
+    }
+
+    // Secondary Fallback if getMerchantByEmail returned null
+    if (!merchant) {
+      merchant = db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+    }
+
     const isSupabaseConfigured =
       process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes('placeholder')
 
@@ -124,8 +137,8 @@ exports.login = async (req, res, next) => {
       isPasswordValid = bcrypt.compareSync(password, merchant.passwordHash)
     }
 
-    // 2. Try Supabase Auth login if configured
-    if (isSupabaseConfigured) {
+    // 2. Try Supabase Auth login if configured and local check didn't pass
+    if (isSupabaseConfigured && !isPasswordValid) {
       const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: password,
@@ -216,7 +229,10 @@ exports.requestPasswordReset = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase()
-    const merchant = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+    let merchant = await supabaseService.getMerchantByEmail(cleanEmail)
+    if (!merchant) {
+      merchant = db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+    }
 
     if (!merchant) {
       return res.status(404).json({ success: false, error: 'No account found with this email address.' })
@@ -259,7 +275,10 @@ exports.resetPassword = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase()
-    const merchant = db.merchants.find((m) => m.email.toLowerCase() === cleanEmail)
+    let merchant = await supabaseService.getMerchantByEmail(cleanEmail)
+    if (!merchant) {
+      merchant = db.merchants.find((m) => m.email && m.email.toLowerCase() === cleanEmail) || null
+    }
 
     if (!merchant) {
       return res.status(404).json({ success: false, error: 'Account not found for this email address.' })
@@ -275,7 +294,7 @@ exports.resetPassword = async (req, res, next) => {
 
     // Update password hash
     merchant.passwordHash = bcrypt.hashSync(newPassword, 8)
-    saveDb()
+    await supabaseService.saveMerchant(merchant)
 
     recoveryStore.delete(cleanEmail)
 
